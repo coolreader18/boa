@@ -3,6 +3,7 @@ mod tests;
 
 use crate::builtins::{
     function::{Function, NativeFunction, NativeFunctionData},
+    function_object::Function as FunctionObj,
     object::{
         internal_methods_trait::ObjectInternalMethods, InternalState, InternalStateCell, Object,
         ObjectKind, INSTANCE_PROTOTYPE, PROTOTYPE,
@@ -50,6 +51,7 @@ pub enum ValueData {
     Object(GcCell<Object>),
     /// `Function` - A runnable block of code, such as `Math.sqrt`, which can take some variables and return a useful value or act upon an object
     Function(Box<GcCell<Function>>),
+    FunctionObj(Box<FunctionObj>),
     /// `Symbol` - A Symbol Type - Internally Symbols are similar to objects, except there are no properties, only internal slots
     Symbol(GcCell<Object>),
 }
@@ -188,6 +190,7 @@ impl ValueData {
             ValueData::Object(_)
             | ValueData::Symbol(_)
             | ValueData::Undefined
+            | ValueData::FunctionObj(_)
             | ValueData::Function(_) => NAN,
             ValueData::String(ref str) => match FromStr::from_str(str) {
                 Ok(num) => num,
@@ -208,6 +211,7 @@ impl ValueData {
             | ValueData::Symbol(_)
             | ValueData::Null
             | ValueData::Boolean(false)
+            | ValueData::FunctionObj(_)
             | ValueData::Function(_) => 0,
             ValueData::String(ref str) => match FromStr::from_str(str) {
                 Ok(num) => num,
@@ -587,6 +591,7 @@ impl ValueData {
             ValueData::Null
             | ValueData::Symbol(_)
             | ValueData::Undefined
+            | ValueData::FunctionObj(_)
             | ValueData::Function(_) => JSONValue::Null,
             ValueData::Boolean(b) => JSONValue::Bool(b),
             ValueData::Object(ref obj) => {
@@ -616,7 +621,7 @@ impl ValueData {
             ValueData::Symbol(_) => "symbol",
             ValueData::Null => "null",
             ValueData::Undefined => "undefined",
-            ValueData::Function(_) => "function",
+            ValueData::FunctionObj(_) | ValueData::Function(_) => "function",
             ValueData::Object(ref o) => {
                 if o.deref().borrow().get_internal_slot("call").is_null() {
                     "object"
@@ -852,6 +857,7 @@ impl Display for ValueData {
             ),
             ValueData::Object(_) => write!(f, "{}", log_string_from(self, true)),
             ValueData::Integer(v) => write!(f, "{}", v),
+            ValueData::FunctionObj(_) => write!(f, "function() {{}}"),
             ValueData::Function(ref v) => match *v.borrow() {
                 Function::NativeFunc(_) => write!(f, "function() {{ [native code] }}"),
                 Function::RegularFunc(ref rf) => {
@@ -1117,6 +1123,21 @@ impl FromValue for Object {
                 Function::NativeFunc(ref data) => data.object.clone(),
                 Function::RegularFunc(ref data) => data.object.clone(),
             }),
+            _ => Err("Value is not a valid object"),
+        }
+    }
+}
+
+impl ToValue for FunctionObj {
+    fn to_value(&self) -> Value {
+        Gc::new(ValueData::FunctionObj(Box::new(self.clone())))
+    }
+}
+
+impl FromValue for FunctionObj {
+    fn from_value(v: Value) -> Result<Self, &'static str> {
+        match *v {
+            ValueData::FunctionObj(ref func) => Ok(*func.clone()),
             _ => Err("Value is not a valid object"),
         }
     }
