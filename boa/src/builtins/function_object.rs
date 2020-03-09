@@ -37,14 +37,14 @@ pub struct Function {
     pub internal_slots: Box<HashMap<String, Value>>,
     /// Properties
     pub properties: Box<HashMap<String, Property>>,
-    // Function Kind
+    /// Function Kind
     pub function_kind: FunctionKind,
-    // is constructor??
+    /// is constructor??
     pub is_constructor: bool,
 }
 
 impl Function {
-    // https://tc39.es/ecma262/#sec-functionallocate
+    /// https://tc39.es/ecma262/#sec-functionallocate
     pub fn allocate(proto: Value, mut kind: FunctionKind) -> Function {
         let needs_construct: bool;
 

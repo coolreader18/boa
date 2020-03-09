@@ -23,7 +23,10 @@ fn to_number(value: &Value) -> Value {
                 to_value(0)
             }
         }
-        ValueData::Function(_) | ValueData::Symbol(_) | ValueData::Undefined => to_value(f64::NAN),
+        ValueData::FunctionObj(_)
+        | ValueData::Function(_)
+        | ValueData::Symbol(_)
+        | ValueData::Undefined => to_value(f64::NAN),
         ValueData::Integer(i) => to_value(f64::from(i)),
         ValueData::Object(ref o) => (o).deref().borrow().get_internal_slot("NumberData"),
         ValueData::Null => to_value(0),
