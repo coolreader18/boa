@@ -40,8 +40,11 @@ use std::{
 };
 use structopt::{clap::arg_enum, StructOpt};
 
-#[cfg_attr(target = "x86_64-unknown-linux-gnu", global_allocator)]
-#[cfg(target = "x86_64-unknown-linux-gnu")]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+#[cfg_attr(
+    all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
+    global_allocator
+)]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 /// CLI configuration for Boa.

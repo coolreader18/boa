@@ -1,8 +1,11 @@
 use boa::exec;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[cfg_attr(target = "x86_64-unknown-linux-gnu", global_allocator)]
-#[cfg(target = "x86_64-unknown-linux-gnu")]
+#[cfg(all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"))]
+#[cfg_attr(
+  all(target_arch = "x86_64", target_os = "linux", target_env = "gnu"),
+  global_allocator
+)]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
 static SRC: &str = r#"
@@ -19,9 +22,9 @@ res;
 "#;
 
 fn fibonacci(c: &mut Criterion) {
-    c.bench_function("fibonacci (Execution)", move |b| {
-        b.iter(|| exec(black_box(SRC)))
-    });
+  c.bench_function("fibonacci (Execution)", move |b| {
+    b.iter(|| exec(black_box(SRC)))
+  });
 }
 
 criterion_group!(benches, fibonacci);
