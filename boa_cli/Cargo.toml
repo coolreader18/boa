@@ -12,4 +12,7 @@ edition = "2018"
 
 [dependencies]
 Boa = { path = "../boa", features = ["serde-ast"], default-features = false }
-structopt = "0.3.12"
+structopt = "0.3.13"
+
+[target.x86_64-unknown-linux-gnu.dependencies]
+jemallocator = "0.3.2"
