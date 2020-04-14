@@ -273,7 +273,7 @@ impl ObjectInternalMethods for Object {
 impl Object {
     /// Return a new ObjectData struct, with `kind` set to Ordinary
     pub fn default() -> Self {
-        let mut object = Object {
+        let mut object = Self {
             kind: ObjectKind::Ordinary,
             internal_slots: Box::new(HashMap::new()),
             properties: Box::new(HashMap::new()),
@@ -289,8 +289,8 @@ impl Object {
     ///
     /// https://tc39.es/ecma262/#sec-objectcreate
     // TODO: proto should be a &Value here
-    pub fn create(proto: Value) -> Object {
-        let mut obj = Object::default();
+    pub fn create(proto: Value) -> Self {
+        let mut obj = Self::default();
         obj.internal_slots
             .insert(INSTANCE_PROTOTYPE.to_string(), proto);
         obj.internal_slots
@@ -312,7 +312,7 @@ impl Object {
 
     /// Return a new Boolean object whose [[BooleanData]] internal slot is set to argument.
     fn from_boolean(argument: &Value) -> Self {
-        let mut obj = Object {
+        let mut obj = Self {
             kind: ObjectKind::Boolean,
             internal_slots: Box::new(HashMap::new()),
             properties: Box::new(HashMap::new()),
@@ -327,7 +327,7 @@ impl Object {
 
     /// Return a new Number object whose [[NumberData]] internal slot is set to argument.
     fn from_number(argument: &Value) -> Self {
-        let mut obj = Object {
+        let mut obj = Self {
             kind: ObjectKind::Number,
             internal_slots: Box::new(HashMap::new()),
             properties: Box::new(HashMap::new()),
@@ -342,7 +342,7 @@ impl Object {
 
     /// Return a new String object whose [[StringData]] internal slot is set to argument.
     fn from_string(argument: &Value) -> Self {
-        let mut obj = Object {
+        let mut obj = Self {
             kind: ObjectKind::String,
             internal_slots: Box::new(HashMap::new()),
             properties: Box::new(HashMap::new()),

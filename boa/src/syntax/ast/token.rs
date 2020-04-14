@@ -71,18 +71,16 @@ pub enum TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match *self {
-            TokenKind::BooleanLiteral(ref val) => write!(f, "{}", val),
-            TokenKind::EOF => write!(f, "end of file"),
-            TokenKind::Identifier(ref ident) => write!(f, "{}", ident),
-            TokenKind::Keyword(ref word) => write!(f, "{}", word),
-            TokenKind::NullLiteral => write!(f, "null"),
-            TokenKind::NumericLiteral(ref num) => write!(f, "{}", num),
-            TokenKind::Punctuator(ref punc) => write!(f, "{}", punc),
-            TokenKind::StringLiteral(ref lit) => write!(f, "{}", lit),
-            TokenKind::RegularExpressionLiteral(ref body, ref flags) => {
-                write!(f, "/{}/{}", body, flags)
-            }
-            TokenKind::LineTerminator => write!(f, "line terminator"),
+            Self::BooleanLiteral(ref val) => write!(f, "{}", val),
+            Self::EOF => write!(f, "end of file"),
+            Self::Identifier(ref ident) => write!(f, "{}", ident),
+            Self::Keyword(ref word) => write!(f, "{}", word),
+            Self::NullLiteral => write!(f, "null"),
+            Self::NumericLiteral(ref num) => write!(f, "{}", num),
+            Self::Punctuator(ref punc) => write!(f, "{}", punc),
+            Self::StringLiteral(ref lit) => write!(f, "{}", lit),
+            Self::RegularExpressionLiteral(ref body, ref flags) => write!(f, "/{}/{}", body, flags),
+            Self::LineTerminator => write!(f, "line terminator"),
         }
     }
 }

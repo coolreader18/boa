@@ -97,26 +97,26 @@ pub enum Node {
 impl Operator for Node {
     fn get_assoc(&self) -> bool {
         match *self {
-            Node::UnaryOp(_, _) | Node::TypeOf(_) | Node::If(_, _, _) | Node::Assign(_, _) => false,
+            Self::UnaryOp(_, _) | Self::TypeOf(_) | Self::If(_, _, _) | Self::Assign(_, _) => false,
             _ => true,
         }
     }
     fn get_precedence(&self) -> u64 {
         match self {
-            Node::GetField(_, _) | Node::GetConstField(_, _) => 1,
-            Node::Call(_, _) => 2,
-            Node::UnaryOp(UnaryOp::IncrementPost, _)
-            | Node::UnaryOp(UnaryOp::IncrementPre, _)
-            | Node::UnaryOp(UnaryOp::DecrementPost, _)
-            | Node::UnaryOp(UnaryOp::DecrementPre, _) => 3,
-            Node::UnaryOp(UnaryOp::Not, _)
-            | Node::UnaryOp(UnaryOp::Tilde, _)
-            | Node::UnaryOp(UnaryOp::Minus, _)
-            | Node::TypeOf(_) => 4,
-            Node::BinOp(op, _, _) => op.get_precedence(),
-            Node::If(_, _, _) => 15,
+            Self::GetField(_, _) | Self::GetConstField(_, _) => 1,
+            Self::Call(_, _) => 2,
+            Self::UnaryOp(UnaryOp::IncrementPost, _)
+            | Self::UnaryOp(UnaryOp::IncrementPre, _)
+            | Self::UnaryOp(UnaryOp::DecrementPost, _)
+            | Self::UnaryOp(UnaryOp::DecrementPre, _) => 3,
+            Self::UnaryOp(UnaryOp::Not, _)
+            | Self::UnaryOp(UnaryOp::Tilde, _)
+            | Self::UnaryOp(UnaryOp::Minus, _)
+            | Self::TypeOf(_) => 4,
+            Self::BinOp(op, _, _) => op.get_precedence(),
+            Self::If(_, _, _) => 15,
             // 16 should be yield
-            Node::Assign(_, _) => 17,
+            Self::Assign(_, _) => 17,
             _ => 19,
         }
     }
@@ -164,7 +164,7 @@ impl Node {
                 }
                 write!(f, "{}}}", indent)
             }
-            Node::StatementList(ref list) => {
+            Self::StatementList(ref list) => {
                 for node in list.iter() {
                     node.display(f, indentation + 1)?;
 
@@ -191,7 +191,7 @@ impl Node {
             }
             Self::New(ref call) => {
                 let (func, args) = match call.as_ref() {
-                    Node::Call(func, args) => (func, args),
+                    Self::Call(func, args) => (func, args),
                     _ => unreachable!("Node::New(ref call): 'call' must only be Node::Call type."),
                 };
 
@@ -351,8 +351,8 @@ pub struct FormalParameter {
 pub type FormalParameters = Vec<FormalParameter>;
 
 impl FormalParameter {
-    pub fn new(name: String, init: Option<Box<Node>>, is_rest_param: bool) -> FormalParameter {
-        FormalParameter {
+    pub fn new(name: String, init: Option<Box<Node>>, is_rest_param: bool) -> Self {
+        Self {
             name,
             init,
             is_rest_param,

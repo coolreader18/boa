@@ -1,9 +1,12 @@
 //! Tests for the parser.
 
 use super::*;
-use crate::syntax::ast::{constant::Const, op::BinOp, op::BitOp};
 use crate::syntax::{
-    ast::node::{FormalParameter, Node},
+    ast::node::{FormalParameter, MethodDefinitionKind, Node, PropertyDefinition},
+    ast::{
+        constant::Const,
+        op::{AssignOp, BinOp, BitOp, NumOp},
+    },
     lexer::Lexer,
 };
 
@@ -116,6 +119,7 @@ fn check_object_short_function_arguments() {
         )])],
     );
 }
+
 #[test]
 fn check_array() {
     use crate::syntax::ast::constant::Const;
@@ -710,7 +714,6 @@ fn check_function_declarations() {
     );
 }
 
-// Should be parsed as `new Class().method()` instead of `new (Class().method())`
 #[test]
 fn check_do_while() {
     check_parser(
@@ -724,6 +727,49 @@ fn check_do_while() {
                 Node::Const(Const::Num(1.0)),
             )])),
             Box::new(Node::Const(Const::Bool(true))),
+        )],
+    );
+}
+
+#[test]
+fn check_break_parsing() {
+    check_parser(
+        "while (true) {break}",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Break(None)])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {
+            break test
+        }",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Break(Some(
+                "test".to_owned(),
+            ))])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {break;}",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Break(None)])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {
+            break test;
+        }",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Break(Some(
+                "test".to_owned(),
+            ))])),
         )],
     );
 }
@@ -747,6 +793,49 @@ fn check_construct_call_precedence() {
 }
 
 #[test]
+fn check_continue_parsing() {
+    check_parser(
+        "while (true) {continue}",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Continue(None)])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {
+            continue test
+        }",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Continue(Some(
+                "test".to_owned(),
+            ))])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {continue;}",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Continue(None)])),
+        )],
+    );
+
+    check_parser(
+        "while (true) {
+            continue test;
+        }",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::StatementList(vec![Node::Continue(Some(
+                "test".to_owned(),
+            ))])),
+        )],
+    );
+}
+
+#[test]
 fn assing_operator_precedence() {
     check_parser(
         "a = a + 1",
@@ -758,5 +847,15 @@ fn assing_operator_precedence() {
                 Node::Const(Const::Num(1.0)),
             )),
         )],
+    );
+}
+
+#[test]
+fn check_throw_parsing() {
+    check_parser(
+        "throw 'error';",
+        &[Node::Throw(Box::new(Node::Const(Const::String(
+            "error".to_owned(),
+        ))))],
     );
 }
