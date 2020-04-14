@@ -1,6 +1,6 @@
 //! Function parsing.
 
-use super::{AssignmentExpression, Block, Cursor, ParseError, ParseResult, TokenParser};
+use super::{read_statements, AssignmentExpression, Cursor, ParseError, ParseResult, TokenParser};
 use crate::syntax::ast::{
     node::{FormalParameter, FormalParameters, Node},
     punc::Punctuator,
@@ -35,17 +35,20 @@ impl TokenParser for ArrowFunction {
                         TokenKind::Identifier("identifier".to_owned()),
                     ],
                     next_token.clone(),
-                    Some("arrow function"),
+                    "arrow function",
                 ))
             }
         };
 
-        cursor.expect_punc(Punctuator::Arrow, Some("arrow function"))?;
+        cursor.expect_punc(Punctuator::Arrow, "arrow function")?;
 
         cursor.skip(|tk| tk.kind == TokenKind::LineTerminator);
         let body = match cursor.peek(0) {
             Some(tk) if tk.kind == TokenKind::Punctuator(Punctuator::OpenBlock) => {
-                Block::parse(cursor)?
+                let _ = cursor.next();
+                let body = read_statements(cursor, true).map(Node::StatementList)?;
+                cursor.expect_punc(Punctuator::CloseBlock, "arrow function")?;
+                body
             }
             _ => Node::Return(Some(Box::new(AssignmentExpression::parse(cursor)?))),
         };
@@ -106,7 +109,7 @@ pub(super) fn read_formal_parameters(
             ));
         }
 
-        cursor.expect_punc(Punctuator::Comma, Some("parameter list"))?;
+        cursor.expect_punc(Punctuator::Comma, "parameter list")?;
     }
 
     Ok(params)
@@ -124,12 +127,12 @@ fn read_function_rest_parameter(cursor: &mut Cursor<'_>) -> Result<FormalParamet
     let token = cursor.next().ok_or(ParseError::AbruptEnd)?;
     Ok(FormalParameter::new(
         if let TokenKind::Identifier(name) = &token.kind {
-            name.clone()
+            name
         } else {
             return Err(ParseError::Expected(
                 vec![TokenKind::Identifier("identifier".to_owned())],
                 token.clone(),
-                Some("rest parameter"),
+                "rest parameter",
             ));
         },
         None,
@@ -155,12 +158,12 @@ fn read_formal_parameter(cursor: &mut Cursor<'_>) -> Result<FormalParameter, Par
         return Err(ParseError::Expected(
             vec![TokenKind::Identifier("identifier".to_owned())],
             token.clone(),
-            Some("formal parameter"),
+            "formal parameter",
         ));
     };
 
     // TODO: Implement initializer.
-    Ok(FormalParameter::new(name.clone(), None, false))
+    Ok(FormalParameter::new(name, None, false))
 }
 
 /// <https://tc39.es/ecma262/#prod-FunctionExpression>
@@ -181,11 +184,15 @@ impl TokenParser for FunctionExpression {
             let _ = cursor.next().expect("nex token disappeared");
         }
 
-        cursor.expect_punc(Punctuator::OpenParen, Some("function expression"))?;
+        cursor.expect_punc(Punctuator::OpenParen, "function expression")?;
 
         let params = read_formal_parameters(cursor)?;
 
-        let body = Block::parse(cursor)?;
+        cursor.expect_punc(Punctuator::OpenBlock, "function expression")?;
+
+        let body = read_statements(cursor, true).map(Node::StatementList)?;
+
+        cursor.expect_punc(Punctuator::CloseBlock, "function expression")?;
 
         Ok(Node::FunctionDecl(name, params, Box::new(body)))
     }

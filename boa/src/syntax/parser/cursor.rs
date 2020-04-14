@@ -121,7 +121,7 @@ impl<'a> Cursor<'a> {
     pub(super) fn expect(
         &mut self,
         kind: TokenKind,
-        routine: Option<&'static str>,
+        routine: &'static str,
     ) -> Result<(), ParseError> {
         let next_token = self.next().ok_or(ParseError::AbruptEnd)?;
         if next_token.kind == kind {
@@ -141,7 +141,7 @@ impl<'a> Cursor<'a> {
     pub(super) fn expect_punc(
         &mut self,
         p: Punctuator,
-        routine: Option<&'static str>,
+        routine: &'static str,
     ) -> Result<(), ParseError> {
         self.expect(TokenKind::Punctuator(p), routine)
     }
@@ -151,10 +151,7 @@ impl<'a> Cursor<'a> {
     /// It will automatically insert a semicolon if needed, as specified in the [spec][spec].
     ///
     /// [spec]: https://tc39.es/ecma262/#sec-automatic-semicolon-insertion
-    pub(super) fn expect_semicolon(
-        &mut self,
-        routine: Option<&'static str>,
-    ) -> Result<(), ParseError> {
+    pub(super) fn expect_semicolon(&mut self, routine: &'static str) -> Result<(), ParseError> {
         match self.peek(0) {
             Some(tk) => match tk.kind {
                 TokenKind::Punctuator(Punctuator::Semicolon) => {

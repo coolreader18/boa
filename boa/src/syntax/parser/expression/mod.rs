@@ -8,7 +8,7 @@
 //! [spec]: https://tc39.es/ecma262/#sec-ecmascript-language-expressions
 
 use super::{
-    read_formal_parameters, ArrowFunction, Block, Cursor, FunctionExpression, ParseError,
+    read_formal_parameters, read_statements, ArrowFunction, Cursor, FunctionExpression, ParseError,
     ParseResult, TokenParser,
 };
 use crate::syntax::ast::{
@@ -33,14 +33,6 @@ macro_rules! expression { ($name:ident, $lower:ident, [$( $op:path ),*] ) => {
             let mut lhs = $lower::parse(cursor)?;
             while let Some(tok) = cursor.peek_skip_lineterminator() {
                 match tok.kind {
-                    // Parse assign expression
-                    TokenKind::Punctuator(op) if op == Punctuator::Assign => {
-                        let _ = cursor.next_skip_lineterminator().expect("token disappeared");
-                        lhs = Node::Assign(
-                            Box::new(lhs),
-                            Box::new($lower::parse(cursor)?)
-                        )
-                    }
                     TokenKind::Punctuator(op) if $( op == $op )||* => {
                         let _ = cursor.next_skip_lineterminator().expect("token disappeared");
                         lhs = Node::BinOp(
@@ -147,7 +139,7 @@ impl TokenParser for ConditionalExpression {
         if let Some(tok) = cursor.next() {
             if tok.kind == TokenKind::Punctuator(Punctuator::Question) {
                 let then_clause = AssignmentExpression::parse(cursor)?;
-                cursor.expect_punc(Punctuator::Colon, Some("conditional expression"))?;
+                cursor.expect_punc(Punctuator::Colon, "conditional expression")?;
 
                 let else_clause = AssignmentExpression::parse(cursor)?;
                 return Ok(Node::ConditionalOp(
@@ -514,7 +506,7 @@ impl TokenParser for MemberExpression {
                 .next_skip_lineterminator()
                 .expect("keyword disappeared");
             let lhs = Self::parse(cursor)?;
-            cursor.expect_punc(Punctuator::OpenParen, Some("member expression"))?;
+            cursor.expect_punc(Punctuator::OpenParen, "member expression")?;
             let args = read_arguments(cursor)?;
             let call_node = Node::Call(Box::new(lhs), args);
 
@@ -543,7 +535,7 @@ impl TokenParser for MemberExpression {
                             return Err(ParseError::Expected(
                                 vec![TokenKind::Identifier("identifier".to_owned())],
                                 tok.clone(),
-                                Some("member expression"),
+                                "member expression",
                             ));
                         }
                     }
@@ -553,7 +545,7 @@ impl TokenParser for MemberExpression {
                         .next_skip_lineterminator()
                         .ok_or(ParseError::AbruptEnd)?; // We move the cursor forward.
                     let idx = Expression::parse(cursor)?;
-                    cursor.expect_punc(Punctuator::CloseBracket, Some("member expression"))?;
+                    cursor.expect_punc(Punctuator::CloseBracket, "member expression")?;
                     lhs = Node::GetField(Box::new(lhs), Box::new(idx));
                 }
                 _ => break,
@@ -580,7 +572,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
         return Err(ParseError::Expected(
             vec![TokenKind::Punctuator(Punctuator::OpenParen)],
             next_token.clone(),
-            Some("call expression"),
+            "call expression",
         ));
     }
 
@@ -612,7 +604,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
                         return Err(ParseError::Expected(
                             vec![TokenKind::Identifier("identifier".to_owned())],
                             tok.clone(),
-                            Some("call expression"),
+                            "call expression",
                         ));
                     }
                 }
@@ -622,7 +614,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
                     .next_skip_lineterminator()
                     .ok_or(ParseError::AbruptEnd)?; // We move the cursor.
                 let idx = Expression::parse(cursor)?;
-                cursor.expect_punc(Punctuator::CloseBracket, Some("call expression"))?;
+                cursor.expect_punc(Punctuator::CloseBracket, "call expression")?;
                 lhs = Node::GetField(Box::new(lhs), Box::new(idx));
             }
             _ => break,
@@ -660,7 +652,7 @@ fn read_arguments(cursor: &mut Cursor<'_>) -> Result<Vec<Node>, ParseError> {
                             TokenKind::Punctuator(Punctuator::CloseParen),
                         ],
                         next_token.clone(),
-                        Some("argument list"),
+                        "argument list",
                     ));
                 } else {
                     cursor.back();
@@ -696,7 +688,7 @@ impl TokenParser for PrimaryExpression {
             TokenKind::Keyword(Keyword::Function) => FunctionExpression::parse(cursor),
             TokenKind::Punctuator(Punctuator::OpenParen) => {
                 let expr = Expression::parse(cursor)?;
-                cursor.expect_punc(Punctuator::CloseParen, Some("primary expression"))?;
+                cursor.expect_punc(Punctuator::CloseParen, "primary expression")?;
                 Ok(expr)
             }
             TokenKind::Punctuator(Punctuator::OpenBracket) => ArrayLiteral::parse(cursor),
@@ -805,7 +797,7 @@ impl TokenParser for ObjectLiteral {
                         TokenKind::Punctuator(Punctuator::CloseBlock),
                     ],
                     next_token.clone(),
-                    Some("object literal"),
+                    "object literal",
                 ));
             }
         }
@@ -854,7 +846,11 @@ impl ObjectLiteral {
         {
             let params = read_formal_parameters(cursor)?;
 
-            let body = Block::parse(cursor)?;
+            cursor.expect_punc(Punctuator::OpenBlock, "method definition")?;
+
+            let body = read_statements(cursor, true).map(Node::StatementList)?;
+
+            cursor.expect_punc(Punctuator::CloseBlock, "method definition")?;
 
             return Ok(PropertyDefinition::MethodDefinition(
                 MethodDefinitionKind::Ordinary,

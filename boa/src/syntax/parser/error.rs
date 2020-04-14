@@ -14,7 +14,7 @@ pub type ParseResult = Result<Node, ParseError>;
 #[derive(Debug, Clone)]
 pub enum ParseError {
     /// When it expected a certain kind of token, but got another as part of something
-    Expected(Vec<TokenKind>, Token, Option<&'static str>),
+    Expected(Vec<TokenKind>, Token, &'static str),
     /// When it expected a certain expression, but got another
     ExpectedExpr(&'static str, Node, Position),
     /// When it didn't expect this keyword
@@ -34,7 +34,7 @@ impl fmt::Display for ParseError {
         match self {
             Self::Expected(expected, actual, routine) => write!(
                 f,
-                "Expected {}, got '{}'{} at line {}, col {}",
+                "Expected {}, got '{}' in {} at line {}, col {}",
                 if expected.len() == 1 {
                     format!(
                         "token '{}'",
@@ -63,11 +63,7 @@ impl fmt::Display for ParseError {
                     )
                 },
                 actual,
-                if let Some(routine) = routine {
-                    format!(" in {}", routine)
-                } else {
-                    String::new()
-                },
+                routine,
                 actual.pos.line_number,
                 actual.pos.column_number
             ),

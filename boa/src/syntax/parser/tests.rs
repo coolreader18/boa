@@ -101,7 +101,7 @@ fn check_object_short_function_arguments() {
             String::from("b"),
             Node::FunctionDecl(
                 None,
-                vec![FormalParameter::new(String::from("test"), None, false)],
+                vec![FormalParameter::new("test", None, false)],
                 Box::new(Node::StatementList(Vec::new())),
             ),
         ),
@@ -617,7 +617,7 @@ fn check_function_declarations() {
         "function foo(a) { return a; }",
         &[Node::FunctionDecl(
             Some(String::from("foo")),
-            vec![FormalParameter::new(String::from("a"), None, false)],
+            vec![FormalParameter::new("a", None, false)],
             Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
                 Node::Local(String::from("a")),
             )))])),
@@ -628,7 +628,7 @@ fn check_function_declarations() {
         "function foo(a) { return; }",
         &[Node::FunctionDecl(
             Some(String::from("foo")),
-            vec![FormalParameter::new(String::from("a"), None, false)],
+            vec![FormalParameter::new("a", None, false)],
             Box::new(Node::StatementList(vec![Node::Return(None)])),
         )],
     );
@@ -637,7 +637,7 @@ fn check_function_declarations() {
         "function foo(a) { return }",
         &[Node::FunctionDecl(
             Some(String::from("foo")),
-            vec![FormalParameter::new(String::from("a"), None, false)],
+            vec![FormalParameter::new("a", None, false)],
             Box::new(Node::StatementList(vec![Node::Return(None)])),
         )],
     );
@@ -647,8 +647,8 @@ fn check_function_declarations() {
         &[Node::FunctionDecl(
             Some(String::from("foo")),
             vec![
-                FormalParameter::new(String::from("a"), None, false),
-                FormalParameter::new(String::from("b"), None, true),
+                FormalParameter::new("a", None, false),
+                FormalParameter::new("b", None, true),
             ],
             Box::new(Node::StatementList(Vec::new())),
         )],
@@ -657,7 +657,7 @@ fn check_function_declarations() {
     check_parser(
         "(...a) => {}",
         &[Node::ArrowFunctionDecl(
-            vec![FormalParameter::new(String::from("a"), None, true)],
+            vec![FormalParameter::new("a", None, true)],
             Box::new(Node::StatementList(Vec::new())),
         )],
     );
@@ -666,9 +666,9 @@ fn check_function_declarations() {
         "(a, b, ...c) => {}",
         &[Node::ArrowFunctionDecl(
             vec![
-                FormalParameter::new(String::from("a"), None, false),
-                FormalParameter::new(String::from("b"), None, false),
-                FormalParameter::new(String::from("c"), None, true),
+                FormalParameter::new("a", None, false),
+                FormalParameter::new("b", None, false),
+                FormalParameter::new("c", None, true),
             ],
             Box::new(Node::StatementList(Vec::new())),
         )],
@@ -678,8 +678,8 @@ fn check_function_declarations() {
         "(a, b) => { return a + b; }",
         &[Node::ArrowFunctionDecl(
             vec![
-                FormalParameter::new(String::from("a"), None, false),
-                FormalParameter::new(String::from("b"), None, false),
+                FormalParameter::new("a", None, false),
+                FormalParameter::new("b", None, false),
             ],
             Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
                 create_bin_op(
@@ -695,8 +695,8 @@ fn check_function_declarations() {
         "(a, b) => { return; }",
         &[Node::ArrowFunctionDecl(
             vec![
-                FormalParameter::new(String::from("a"), None, false),
-                FormalParameter::new(String::from("b"), None, false),
+                FormalParameter::new("a", None, false),
+                FormalParameter::new("b", None, false),
             ],
             Box::new(Node::StatementList(vec![Node::Return(None)])),
         )],
@@ -706,8 +706,8 @@ fn check_function_declarations() {
         "(a, b) => { return }",
         &[Node::ArrowFunctionDecl(
             vec![
-                FormalParameter::new(String::from("a"), None, false),
-                FormalParameter::new(String::from("b"), None, false),
+                FormalParameter::new("a", None, false),
+                FormalParameter::new("b", None, false),
             ],
             Box::new(Node::StatementList(vec![Node::Return(None)])),
         )],
@@ -734,10 +734,27 @@ fn check_do_while() {
 #[test]
 fn check_break_parsing() {
     check_parser(
+        "while (true) break;",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::Break(None)),
+        )],
+    );
+
+    check_parser(
+        "while (true)
+            break;",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::Break(None)),
+        )],
+    );
+
+    check_parser(
         "while (true) {break}",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Break(None)])),
+            Box::new(Node::Block(vec![Node::Break(None)])),
         )],
     );
 
@@ -747,9 +764,7 @@ fn check_break_parsing() {
         }",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Break(Some(
-                "test".to_owned(),
-            ))])),
+            Box::new(Node::Block(vec![Node::Break(Some("test".to_owned()))])),
         )],
     );
 
@@ -757,7 +772,7 @@ fn check_break_parsing() {
         "while (true) {break;}",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Break(None)])),
+            Box::new(Node::Block(vec![Node::Break(None)])),
         )],
     );
 
@@ -767,9 +782,7 @@ fn check_break_parsing() {
         }",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Break(Some(
-                "test".to_owned(),
-            ))])),
+            Box::new(Node::Block(vec![Node::Break(Some("test".to_owned()))])),
         )],
     );
 }
@@ -795,10 +808,27 @@ fn check_construct_call_precedence() {
 #[test]
 fn check_continue_parsing() {
     check_parser(
+        "while (true) continue;",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::Continue(None)),
+        )],
+    );
+
+    check_parser(
+        "while (true)
+            continue;",
+        &[Node::WhileLoop(
+            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::Continue(None)),
+        )],
+    );
+
+    check_parser(
         "while (true) {continue}",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Continue(None)])),
+            Box::new(Node::Block(vec![Node::Continue(None)])),
         )],
     );
 
@@ -808,9 +838,7 @@ fn check_continue_parsing() {
         }",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Continue(Some(
-                "test".to_owned(),
-            ))])),
+            Box::new(Node::Block(vec![Node::Continue(Some("test".to_owned()))])),
         )],
     );
 
@@ -818,7 +846,7 @@ fn check_continue_parsing() {
         "while (true) {continue;}",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Continue(None)])),
+            Box::new(Node::Block(vec![Node::Continue(None)])),
         )],
     );
 
@@ -828,9 +856,7 @@ fn check_continue_parsing() {
         }",
         &[Node::WhileLoop(
             Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::StatementList(vec![Node::Continue(Some(
-                "test".to_owned(),
-            ))])),
+            Box::new(Node::Block(vec![Node::Continue(Some("test".to_owned()))])),
         )],
     );
 }

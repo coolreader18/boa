@@ -351,9 +351,12 @@ pub struct FormalParameter {
 pub type FormalParameters = Vec<FormalParameter>;
 
 impl FormalParameter {
-    pub fn new(name: String, init: Option<Box<Node>>, is_rest_param: bool) -> Self {
+    pub fn new<N>(name: N, init: Option<Box<Node>>, is_rest_param: bool) -> Self
+    where
+        N: Into<String>,
+    {
         Self {
-            name,
+            name: name.into(),
             init,
             is_rest_param,
         }

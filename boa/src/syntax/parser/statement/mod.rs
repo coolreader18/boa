@@ -93,7 +93,7 @@ impl TokenParser for Statement {
                             TokenKind::LineTerminator,
                         ],
                         tok.clone(),
-                        None,
+                        "statement",
                     ));
                 }
             }
@@ -118,12 +118,12 @@ struct IfStatement;
 
 impl TokenParser for IfStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::If), Some("if statement"))?;
-        cursor.expect_punc(Punctuator::OpenParen, Some("if statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::If), "if statement")?;
+        cursor.expect_punc(Punctuator::OpenParen, "if statement")?;
 
         let cond = Expression::parse(cursor)?;
 
-        cursor.expect_punc(Punctuator::CloseParen, Some("if statement"))?;
+        cursor.expect_punc(Punctuator::CloseParen, "if statement")?;
 
         let then_stm = Statement::parse(cursor)?;
 
@@ -156,11 +156,11 @@ struct VariableStatement;
 
 impl TokenParser for VariableStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::Var), Some("variable statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::Var), "variable statement")?;
 
         let decl_list = VariableDeclarationList::parse(cursor)?;
 
-        cursor.expect_semicolon(Some("variable statement"))?;
+        cursor.expect_semicolon("variable statement")?;
 
         Ok(decl_list)
     }
@@ -188,7 +188,7 @@ impl VariableDeclarationList {
             return Err(ParseError::Expected(
                 vec![TokenKind::Identifier("identifier".to_string())],
                 tok.clone(),
-                Some("variable declaration"),
+                "variable declaration",
             ));
         };
 
@@ -227,7 +227,7 @@ struct Initializer;
 
 impl TokenParser for Initializer {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect_punc(Punctuator::Assign, Some("initializer"))?;
+        cursor.expect_punc(Punctuator::Assign, "initializer")?;
         AssignmentExpression::parse(cursor)
     }
 }
@@ -245,9 +245,9 @@ pub(super) struct Block;
 
 impl TokenParser for Block {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect_punc(Punctuator::OpenBlock, Some("block"))?;
-        let statement_list = read_statements(cursor, true).map(Node::StatementList)?;
-        cursor.expect_punc(Punctuator::CloseBlock, Some("block"))?;
+        cursor.expect_punc(Punctuator::OpenBlock, "block")?;
+        let statement_list = read_statements(cursor, true).map(Node::Block)?;
+        cursor.expect_punc(Punctuator::CloseBlock, "block")?;
 
         Ok(statement_list)
     }
@@ -366,9 +366,9 @@ impl Declaration {
                     vec![TokenKind::Identifier("identifier".to_owned())],
                     token.clone(),
                     if is_const {
-                        Some("const declaration")
+                        "const declaration"
                     } else {
-                        Some("let declaration")
+                        "let declaration"
                     },
                 ));
             };
@@ -391,7 +391,7 @@ impl Declaration {
                                 .next_skip_lineterminator()
                                 .ok_or(ParseError::AbruptEnd)?
                                 .clone(),
-                            Some("const declaration"),
+                            "const declaration",
                         ));
                     } else {
                         let_decls.push((name, None));
@@ -430,20 +430,24 @@ impl TokenParser for FunctionDeclaration {
             name.clone()
         } else {
             return Err(ParseError::Expected(
-                vec![TokenKind::Identifier(String::from("function name"))],
+                vec![TokenKind::Identifier("function name".to_owned())],
                 token.clone(),
-                Some("function declaration"),
+                "function declaration",
             ));
         };
 
         cursor.expect(
             TokenKind::Punctuator(Punctuator::OpenParen),
-            Some("function declaration"),
+            "function declaration",
         )?;
 
         let params = read_formal_parameters(cursor)?;
 
-        let body = Block::parse(cursor)?;
+        cursor.expect_punc(Punctuator::OpenBlock, "function declaration")?;
+
+        let body = read_statements(cursor, true).map(Node::StatementList)?;
+
+        cursor.expect_punc(Punctuator::CloseBlock, "function declaration")?;
 
         Ok(Node::FunctionDecl(Some(name), params, Box::new(body)))
     }
@@ -455,10 +459,7 @@ struct ReturnStatement;
 
 impl TokenParser for ReturnStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(
-            TokenKind::Keyword(Keyword::Return),
-            Some("return statement"),
-        )?;
+        cursor.expect(TokenKind::Keyword(Keyword::Return), "return statement")?;
 
         if let Some(tok) = cursor.peek(0) {
             match tok.kind {
@@ -475,7 +476,7 @@ impl TokenParser for ReturnStatement {
 
         let expr = Expression::parse(cursor)?;
 
-        cursor.expect_semicolon(Some("return statement"))?;
+        cursor.expect_semicolon("return statement")?;
 
         Ok(Node::Return(Some(Box::new(expr))))
     }
@@ -487,12 +488,12 @@ struct WhileStatement;
 
 impl TokenParser for WhileStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::While), Some("while statement"))?;
-        cursor.expect_punc(Punctuator::OpenParen, Some("while statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::While), "while statement")?;
+        cursor.expect_punc(Punctuator::OpenParen, "while statement")?;
 
         let cond = Expression::parse(cursor)?;
 
-        cursor.expect_punc(Punctuator::CloseParen, Some("while statement"))?;
+        cursor.expect_punc(Punctuator::CloseParen, "while statement")?;
 
         let body = Statement::parse(cursor)?;
 
@@ -523,7 +524,7 @@ fn lexical_declaration_continuation(cursor: &mut Cursor<'_>) -> Result<bool, Par
                     TokenKind::LineTerminator,
                 ],
                 cursor.next().ok_or(ParseError::AbruptEnd)?.clone(),
-                Some("lexical declaration"),
+                "lexical declaration",
             )),
         }
     } else {
@@ -537,7 +538,7 @@ struct BreakStatement;
 
 impl TokenParser for BreakStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::Break), Some("break statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::Break), "break statement")?;
 
         let tok = cursor.next().ok_or(ParseError::AbruptEnd)?;
         match &tok.kind {
@@ -556,7 +557,7 @@ impl TokenParser for BreakStatement {
                     TokenKind::Identifier("identifier".to_owned()),
                 ],
                 tok.clone(),
-                Some("break statement"),
+                "break statement",
             )),
         }
     }
@@ -568,8 +569,8 @@ struct ForStatement;
 
 impl TokenParser for ForStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::For), Some("for statement"))?;
-        cursor.expect_punc(Punctuator::OpenParen, Some("for statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::For), "for statement")?;
+        cursor.expect_punc(Punctuator::OpenParen, "for statement")?;
 
         let init = match cursor.peek(0).ok_or(ParseError::AbruptEnd)?.kind {
             TokenKind::Keyword(Keyword::Var) => {
@@ -582,7 +583,7 @@ impl TokenParser for ForStatement {
             _ => Some(Box::new(Expression::parse(cursor)?)),
         };
 
-        cursor.expect_punc(Punctuator::Semicolon, Some("for statement"))?;
+        cursor.expect_punc(Punctuator::Semicolon, "for statement")?;
 
         let cond = if cursor
             .next_if(TokenKind::Punctuator(Punctuator::Semicolon))
@@ -591,7 +592,7 @@ impl TokenParser for ForStatement {
             Some(Box::new(Node::Const(Const::Bool(true))))
         } else {
             let step = Some(Box::new(Expression::parse(cursor)?));
-            cursor.expect_punc(Punctuator::Semicolon, Some("for statement"))?;
+            cursor.expect_punc(Punctuator::Semicolon, "for statement")?;
             step
         };
 
@@ -604,7 +605,7 @@ impl TokenParser for ForStatement {
             let step = Expression::parse(cursor)?;
             cursor.expect(
                 TokenKind::Punctuator(Punctuator::CloseParen),
-                Some("for statement"),
+                "for statement",
             )?;
             Some(Box::new(step))
         };
@@ -623,10 +624,7 @@ struct ContinueStatement;
 
 impl TokenParser for ContinueStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(
-            TokenKind::Keyword(Keyword::Continue),
-            Some("continue statement"),
-        )?;
+        cursor.expect(TokenKind::Keyword(Keyword::Continue), "continue statement")?;
 
         let tok = cursor.next().ok_or(ParseError::AbruptEnd)?;
         match &tok.kind {
@@ -644,7 +642,7 @@ impl TokenParser for ContinueStatement {
                     TokenKind::Punctuator(Punctuator::CloseBlock),
                 ],
                 tok.clone(),
-                Some("continue statement"),
+                "continue statement",
             )),
         }
     }
@@ -656,7 +654,7 @@ struct ThrowStatement;
 
 impl TokenParser for ThrowStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
-        cursor.expect(TokenKind::Keyword(Keyword::Throw), Some("throw statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::Throw), "throw statement")?;
 
         if let Some(tok) = cursor.peek(0) {
             match tok.kind {
@@ -687,7 +685,7 @@ struct TryStatement;
 impl TokenParser for TryStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
         // TRY
-        cursor.expect(TokenKind::Keyword(Keyword::Try), Some("try statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::Try), "try statement")?;
 
         let try_clause = Block::parse(cursor)?;
 
@@ -704,7 +702,7 @@ impl TokenParser for TryStatement {
                     TokenKind::Keyword(Keyword::Finally),
                 ],
                 next_token.clone(),
-                Some("try statement"),
+                "try statement",
             ));
         }
 
@@ -713,7 +711,7 @@ impl TokenParser for TryStatement {
             cursor.skip(|tk| tk.kind == TokenKind::LineTerminator); // Advance the cursor
 
             // Catch binding
-            cursor.expect_punc(Punctuator::OpenParen, Some("catch in try statement"))?;
+            cursor.expect_punc(Punctuator::OpenParen, "catch in try statement")?;
             // TODO: should accept BindingPattern
             let tok = cursor.next().ok_or(ParseError::AbruptEnd)?;
             let catch_param = if let TokenKind::Identifier(s) = &tok.kind {
@@ -722,10 +720,10 @@ impl TokenParser for TryStatement {
                 return Err(ParseError::Expected(
                     vec![TokenKind::Identifier("identifier".to_owned())],
                     tok.clone(),
-                    Some("catch in try statement"),
+                    "catch in try statement",
                 ));
             };
-            cursor.expect_punc(Punctuator::CloseParen, Some("catch in try statement"))?;
+            cursor.expect_punc(Punctuator::CloseParen, "catch in try statement")?;
 
             // Catch block
             (
@@ -767,6 +765,8 @@ struct DoWhileStatement;
 
 impl TokenParser for DoWhileStatement {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
+        cursor.expect(TokenKind::Keyword(Keyword::Do), "do while statement")?;
+
         let body = Statement::parse(cursor)?;
 
         let next_token = cursor
@@ -777,17 +777,19 @@ impl TokenParser for DoWhileStatement {
             return Err(ParseError::Expected(
                 vec![TokenKind::Keyword(Keyword::While)],
                 next_token.clone(),
-                Some("do while statement"),
+                "do while statement",
             ));
         }
 
-        let _ = cursor.next_skip_lineterminator(); // skip while token
+        cursor.skip(|tk| tk.kind == TokenKind::LineTerminator);
 
-        cursor.expect_punc(Punctuator::OpenParen, Some("do while statement"))?;
+        cursor.expect(TokenKind::Keyword(Keyword::While), "do while statement")?;
+        cursor.expect_punc(Punctuator::OpenParen, "do while statement")?;
 
         let cond = Expression::parse(cursor)?;
 
-        cursor.expect_punc(Punctuator::CloseParen, Some("do while statement"))?;
+        cursor.expect_punc(Punctuator::CloseParen, "do while statement")?;
+        cursor.expect_semicolon("do while statement")?;
 
         Ok(Node::DoWhileLoop(Box::new(body), Box::new(cond)))
     }
