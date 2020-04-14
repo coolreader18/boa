@@ -3,16 +3,9 @@
 use super::*;
 use crate::syntax::{
     ast::node::{FormalParameter, MethodDefinitionKind, Node, PropertyDefinition},
-    ast::{
-        constant::Const,
-        op::{AssignOp, BinOp, BitOp, NumOp},
-    },
+    ast::op::{AssignOp, BinOp, BitOp, NumOp},
     lexer::Lexer,
 };
-
-fn create_bin_op(op: BinOp, exp1: Node, exp2: Node) -> Node {
-    Node::BinOp(op, Box::new(exp1), Box::new(exp2))
-}
 
 #[allow(clippy::result_unwrap_used)]
 fn check_parser(js: &str, expr: &[Node]) {
@@ -34,23 +27,18 @@ fn check_invalid(js: &str) {
 
 #[test]
 fn check_string() {
-    use crate::syntax::ast::constant::Const;
-
     // Check empty string
-    check_parser("\"\"", &[Node::Const(Const::String(String::new()))]);
+    check_parser("\"\"", &[Node::const_node("")]);
 
     // Check non-empty string
-    check_parser(
-        "\"hello\"",
-        &[Node::Const(Const::String(String::from("hello")))],
-    );
+    check_parser("\"hello\"", &[Node::const_node("hello")]);
 }
 
 #[test]
 fn check_object_literal() {
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::Const(Const::Bool(true))),
-        PropertyDefinition::Property(String::from("b"), Node::Const(Const::Bool(false))),
+        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
+        PropertyDefinition::Property(String::from("b"), Node::const_node(false)),
     ];
 
     check_parser(
@@ -70,7 +58,7 @@ fn check_object_literal() {
 fn check_object_short_function() {
     // Testing short function syntax
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::Const(Const::Bool(true))),
+        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
         PropertyDefinition::MethodDefinition(
             MethodDefinitionKind::Ordinary,
             String::from("b"),
@@ -95,7 +83,7 @@ fn check_object_short_function() {
 fn check_object_short_function_arguments() {
     // Testing short function syntax
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::Const(Const::Bool(true))),
+        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
         PropertyDefinition::MethodDefinition(
             MethodDefinitionKind::Ordinary,
             String::from("b"),
@@ -137,9 +125,9 @@ fn check_array() {
     check_parser(
         "[1, 2, 3]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::Num(2.0)),
-            Node::Const(Const::Num(3.0)),
+            Node::const_node(1.0),
+            Node::const_node(2.0),
+            Node::const_node(3.0),
         ])],
     );
 
@@ -147,9 +135,9 @@ fn check_array() {
     check_parser(
         "[1, 2, 3,]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::Num(2.0)),
-            Node::Const(Const::Num(3.0)),
+            Node::const_node(1.0),
+            Node::const_node(2.0),
+            Node::const_node(3.0),
         ])],
     );
 
@@ -157,10 +145,10 @@ fn check_array() {
     check_parser(
         "[1, 2, , 3]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::Num(2.0)),
+            Node::const_node(1.0),
+            Node::const_node(2.0),
             Node::Const(Const::Undefined),
-            Node::Const(Const::Num(3.0)),
+            Node::const_node(3.0),
         ])],
     );
 
@@ -168,11 +156,11 @@ fn check_array() {
     check_parser(
         "[1, 2, ,, 3]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::Num(2.0)),
+            Node::const_node(1.0),
+            Node::const_node(2.0),
             Node::Const(Const::Undefined),
             Node::Const(Const::Undefined),
-            Node::Const(Const::Num(3.0)),
+            Node::const_node(3.0),
         ])],
     );
 
@@ -180,9 +168,9 @@ fn check_array() {
     check_parser(
         "[1, \"a\", 2]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::String(String::from("a"))),
-            Node::Const(Const::Num(2.0)),
+            Node::const_node(1.0),
+            Node::const_node("a"),
+            Node::const_node(2.0),
         ])],
     );
 
@@ -190,23 +178,21 @@ fn check_array() {
     check_parser(
         "[1, \"\", 2]",
         &[Node::ArrayDecl(vec![
-            Node::Const(Const::Num(1.0)),
-            Node::Const(Const::String(String::new())),
-            Node::Const(Const::Num(2.0)),
+            Node::const_node(1.0),
+            Node::const_node(""),
+            Node::const_node(2.0),
         ])],
     );
 }
 
 #[test]
 fn check_declarations() {
-    use crate::syntax::ast::constant::Const;
-
     // Check `var` declaration
     check_parser(
         "var a = 5;",
         &[Node::VarDecl(vec![(
             String::from("a"),
-            Some(Node::Const(Const::Num(5.0))),
+            Some(Node::const_node(5.0)),
         )])],
     );
 
@@ -215,7 +201,7 @@ fn check_declarations() {
         "var a=5;",
         &[Node::VarDecl(vec![(
             String::from("a"),
-            Some(Node::Const(Const::Num(5.0))),
+            Some(Node::const_node(5.0)),
         )])],
     );
 
@@ -226,9 +212,9 @@ fn check_declarations() {
     check_parser(
         "var a = 5, b, c = 6;",
         &[Node::VarDecl(vec![
-            (String::from("a"), Some(Node::Const(Const::Num(5.0)))),
+            (String::from("a"), Some(Node::const_node(5.0))),
             (String::from("b"), None),
-            (String::from("c"), Some(Node::Const(Const::Num(6.0)))),
+            (String::from("c"), Some(Node::const_node(6.0))),
         ])],
     );
 
@@ -237,7 +223,7 @@ fn check_declarations() {
         "let a = 5;",
         &[Node::LetDecl(vec![(
             String::from("a"),
-            Some(Node::Const(Const::Num(5.0))),
+            Some(Node::const_node(5.0)),
         )])],
     );
 
@@ -246,7 +232,7 @@ fn check_declarations() {
         "let a=5;",
         &[Node::LetDecl(vec![(
             String::from("a"),
-            Some(Node::Const(Const::Num(5.0))),
+            Some(Node::const_node(5.0)),
         )])],
     );
 
@@ -257,9 +243,9 @@ fn check_declarations() {
     check_parser(
         "let a = 5, b, c = 6;",
         &[Node::LetDecl(vec![
-            (String::from("a"), Some(Node::Const(Const::Num(5.0)))),
+            (String::from("a"), Some(Node::const_node(5.0))),
             (String::from("b"), None),
-            (String::from("c"), Some(Node::Const(Const::Num(6.0)))),
+            (String::from("c"), Some(Node::const_node(6.0))),
         ])],
     );
 
@@ -268,7 +254,7 @@ fn check_declarations() {
         "const a = 5;",
         &[Node::ConstDecl(vec![(
             String::from("a"),
-            Node::Const(Const::Num(5.0)),
+            Node::const_node(5.0),
         )])],
     );
 
@@ -277,7 +263,7 @@ fn check_declarations() {
         "const a=5;",
         &[Node::ConstDecl(vec![(
             String::from("a"),
-            Node::Const(Const::Num(5.0)),
+            Node::const_node(5.0),
         )])],
     );
 
@@ -288,325 +274,287 @@ fn check_declarations() {
     check_parser(
         "const a = 5, c = 6;",
         &[Node::ConstDecl(vec![
-            (String::from("a"), Node::Const(Const::Num(5.0))),
-            (String::from("c"), Node::Const(Const::Num(6.0))),
+            (String::from("a"), Node::const_node(5.0)),
+            (String::from("c"), Node::const_node(6.0)),
         ])],
     );
 }
 
 #[test]
 fn check_operations() {
-    use crate::syntax::ast::{constant::Const, op::BinOp};
-
-    fn create_bin_op(op: BinOp, exp1: Node, exp2: Node) -> Node {
-        Node::BinOp(op, Box::new(exp1), Box::new(exp2))
-    }
-
     // Check numeric operations
     check_parser(
         "a + b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Add),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Add, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a+1",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Add),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(1.0)),
+        &[Node::bin_op(
+            NumOp::Add,
+            Node::local("a"),
+            Node::const_node(1.0),
         )],
     );
     check_parser(
         "a - b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Sub),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Sub, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a-1",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Sub),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(1.0)),
+        &[Node::bin_op(
+            NumOp::Sub,
+            Node::local("a"),
+            Node::const_node(1.0),
         )],
     );
     check_parser(
         "a / b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Div),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Div, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a/2",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Div),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(2.0)),
+        &[Node::bin_op(
+            NumOp::Div,
+            Node::local("a"),
+            Node::const_node(2.0),
         )],
     );
     check_parser(
         "a * b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Mul),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Mul, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a*2",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Mul),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(2.0)),
+        &[Node::bin_op(
+            NumOp::Mul,
+            Node::local("a"),
+            Node::const_node(2.0),
         )],
     );
     check_parser(
         "a ** b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Exp),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Exp, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a**2",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Exp),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(2.0)),
+        &[Node::bin_op(
+            NumOp::Exp,
+            Node::local("a"),
+            Node::const_node(2.0),
         )],
     );
     check_parser(
         "a % b",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Mod),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
-        )],
+        &[Node::bin_op(NumOp::Mod, Node::local("a"), Node::local("b"))],
     );
     check_parser(
         "a%2",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Mod),
-            Node::Local(String::from("a")),
-            Node::Const(Const::Num(2.0)),
+        &[Node::bin_op(
+            NumOp::Mod,
+            Node::local("a"),
+            Node::const_node(2.0),
         )],
     );
 
     // Check complex numeric operations
     check_parser(
         "a + d*(b-3)+1",
-        &[create_bin_op(
-            BinOp::Num(NumOp::Add),
-            create_bin_op(
-                BinOp::Num(NumOp::Add),
-                Node::Local(String::from("a")),
-                create_bin_op(
-                    BinOp::Num(NumOp::Mul),
-                    Node::Local(String::from("d")),
-                    create_bin_op(
-                        BinOp::Num(NumOp::Sub),
-                        Node::Local(String::from("b")),
-                        Node::Const(Const::Num(3.0)),
-                    ),
+        &[Node::bin_op(
+            NumOp::Add,
+            Node::bin_op(
+                NumOp::Add,
+                Node::local("a"),
+                Node::bin_op(
+                    NumOp::Mul,
+                    Node::local("d"),
+                    Node::bin_op(NumOp::Sub, Node::local("b"), Node::const_node(3.0)),
                 ),
             ),
-            Node::Const(Const::Num(1.0)),
+            Node::const_node(1.0),
         )],
     );
 
     // Check bitwise operations
     check_parser(
         "a & b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::And),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a&b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::And),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
 
     check_parser(
         "a | b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Or),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a|b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Or),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
 
     check_parser(
         "a ^ b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Xor),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a^b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Xor),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
 
     check_parser(
         "a << b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Shl),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a<<b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Shl),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
 
     check_parser(
         "a >> b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Shr),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a>>b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Bit(BitOp::Shr),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
 
     // Check assign ops
     check_parser(
         "a += b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Add),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a -= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Sub),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a *= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Mul),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a **= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Exp),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a /= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Div),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a %= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Mod),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a &= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::And),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a |= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Or),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a ^= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Xor),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a <<= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Shl),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a >>= b",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Shr),
-            Node::Local(String::from("a")),
-            Node::Local(String::from("b")),
+            Node::local("a"),
+            Node::local("b"),
         )],
     );
     check_parser(
         "a %= 10 / 2",
-        &[create_bin_op(
+        &[Node::bin_op(
             BinOp::Assign(AssignOp::Mod),
-            Node::Local(String::from("a")),
-            create_bin_op(
-                BinOp::Num(NumOp::Div),
-                Node::Const(Const::Num(10.0)),
-                Node::Const(Const::Num(2.0)),
-            ),
+            Node::local("a"),
+            Node::bin_op(NumOp::Div, Node::const_node(10.0), Node::const_node(2.0)),
         )],
     );
 }
@@ -619,7 +567,7 @@ fn check_function_declarations() {
             Some(String::from("foo")),
             vec![FormalParameter::new("a", None, false)],
             Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
-                Node::Local(String::from("a")),
+                Node::local("a"),
             )))])),
         )],
     );
@@ -682,11 +630,7 @@ fn check_function_declarations() {
                 FormalParameter::new("b", None, false),
             ],
             Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
-                create_bin_op(
-                    BinOp::Num(NumOp::Add),
-                    Node::Local(String::from("a")),
-                    Node::Local(String::from("b")),
-                ),
+                Node::bin_op(NumOp::Add, Node::local("a"), Node::local("b")),
             )))])),
         )],
     );
@@ -721,12 +665,12 @@ fn check_do_while() {
             a += 1;
         } while (true)"#,
         &[Node::DoWhileLoop(
-            Box::new(Node::Block(vec![create_bin_op(
+            Box::new(Node::Block(vec![Node::bin_op(
                 BinOp::Assign(AssignOp::Add),
-                Node::Local(String::from("a")),
-                Node::Const(Const::Num(1.0)),
+                Node::local("a"),
+                Node::const_node(1.0),
             )])),
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
         )],
     );
 }
@@ -736,7 +680,7 @@ fn check_break_parsing() {
     check_parser(
         "while (true) break;",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Break(None)),
         )],
     );
@@ -745,7 +689,7 @@ fn check_break_parsing() {
         "while (true)
             break;",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Break(None)),
         )],
     );
@@ -753,7 +697,7 @@ fn check_break_parsing() {
     check_parser(
         "while (true) {break}",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Block(vec![Node::Break(None)])),
         )],
     );
@@ -763,7 +707,7 @@ fn check_break_parsing() {
             break test
         }",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Block(vec![Node::Break(Some("test".to_owned()))])),
         )],
     );
@@ -771,7 +715,7 @@ fn check_break_parsing() {
     check_parser(
         "while (true) {break;}",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Block(vec![Node::Break(None)])),
         )],
     );
@@ -781,8 +725,8 @@ fn check_break_parsing() {
             break test;
         }",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::Block(vec![Node::Break(Some("test".to_owned()))])),
+            Box::new(Node::const_node(true)),
+            Box::new(Node::Block(vec![Node::break_node("test")])),
         )],
     );
 }
@@ -795,7 +739,7 @@ fn check_construct_call_precedence() {
         &[Node::Call(
             Box::new(Node::GetConstField(
                 Box::new(Node::New(Box::new(Node::Call(
-                    Box::new(Node::Local(String::from("Date"))),
+                    Box::new(Node::local("Date")),
                     vec![],
                 )))),
                 String::from("getTime"),
@@ -810,7 +754,7 @@ fn check_continue_parsing() {
     check_parser(
         "while (true) continue;",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Continue(None)),
         )],
     );
@@ -819,7 +763,7 @@ fn check_continue_parsing() {
         "while (true)
             continue;",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Continue(None)),
         )],
     );
@@ -827,7 +771,7 @@ fn check_continue_parsing() {
     check_parser(
         "while (true) {continue}",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Block(vec![Node::Continue(None)])),
         )],
     );
@@ -837,15 +781,15 @@ fn check_continue_parsing() {
             continue test
         }",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::Block(vec![Node::Continue(Some("test".to_owned()))])),
+            Box::new(Node::const_node(true)),
+            Box::new(Node::Block(vec![Node::continue_node("test")])),
         )],
     );
 
     check_parser(
         "while (true) {continue;}",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
+            Box::new(Node::const_node(true)),
             Box::new(Node::Block(vec![Node::Continue(None)])),
         )],
     );
@@ -855,8 +799,8 @@ fn check_continue_parsing() {
             continue test;
         }",
         &[Node::WhileLoop(
-            Box::new(Node::Const(Const::Bool(true))),
-            Box::new(Node::Block(vec![Node::Continue(Some("test".to_owned()))])),
+            Box::new(Node::const_node(true)),
+            Box::new(Node::Block(vec![Node::continue_node("test")])),
         )],
     );
 }
@@ -865,13 +809,9 @@ fn check_continue_parsing() {
 fn assing_operator_precedence() {
     check_parser(
         "a = a + 1",
-        &[Node::Assign(
-            Box::new(Node::Local(String::from("a"))),
-            Box::new(create_bin_op(
-                BinOp::Num(NumOp::Add),
-                Node::Local(String::from("a")),
-                Node::Const(Const::Num(1.0)),
-            )),
+        &[Node::assign(
+            Node::local("a"),
+            Node::bin_op(NumOp::Add, Node::local("a"), Node::const_node(1.0)),
         )],
     );
 }
@@ -880,8 +820,6 @@ fn assing_operator_precedence() {
 fn check_throw_parsing() {
     check_parser(
         "throw 'error';",
-        &[Node::Throw(Box::new(Node::Const(Const::String(
-            "error".to_owned(),
-        ))))],
+        &[Node::Throw(Box::new(Node::const_node("error")))],
     );
 }

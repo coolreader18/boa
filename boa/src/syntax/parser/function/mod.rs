@@ -53,7 +53,7 @@ impl TokenParser for ArrowFunction {
             _ => Node::Return(Some(Box::new(AssignmentExpression::parse(cursor)?))),
         };
 
-        Ok(Node::ArrowFunctionDecl(params, Box::new(body)))
+        Ok(Node::arrow_function_decl(params, body))
     }
 }
 

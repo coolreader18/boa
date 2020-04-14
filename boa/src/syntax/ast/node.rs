@@ -129,6 +129,160 @@ impl fmt::Display for Node {
 }
 
 impl Node {
+    /// Creates an `ArrayDecl` AST node.
+    pub fn array_decl<N>(nodes: N) -> Self
+    where
+        N: Into<Vec<Node>>,
+    {
+        Self::ArrayDecl(nodes.into())
+    }
+
+    /// Creates an `ArraowFunctionDecl` AST node.
+    pub fn arrow_function_decl<P>(params: P, body: Node) -> Self
+    where
+        P: Into<Vec<FormalParameter>>,
+    {
+        Self::ArrowFunctionDecl(params.into(), Box::new(body))
+    }
+
+    /// Creates an `Assign` AST node.
+    pub fn assign(lhs: Node, rhs: Node) -> Self {
+        Self::Assign(Box::new(lhs), Box::new(rhs))
+    }
+
+    /// Creates a `BinOp` AST node.
+    pub fn bin_op<O>(op: O, lhs: Node, rhs: Node) -> Self
+    where
+        O: Into<BinOp>,
+    {
+        Self::BinOp(op.into(), Box::new(lhs), Box::new(rhs))
+    }
+
+    /// Creates a `Block` AST node.
+    pub fn block<N>(nodes: N) -> Self
+    where
+        N: Into<Vec<Node>>,
+    {
+        Self::Block(nodes.into())
+    }
+
+    /// Creates a `Break` AST node.
+    pub fn break_node<OL, L>(label: OL) -> Self
+    where
+        L: Into<String>,
+        OL: Into<Option<L>>,
+    {
+        Self::Break(label.into().map(L::into))
+    }
+
+    /// Creates a `Call` AST node.
+    pub fn call<P>(function: Node, params: P) -> Self
+    where
+        P: Into<Vec<Node>>,
+    {
+        Self::Call(Box::new(function), params.into())
+    }
+
+    /// Creates a `ConditionalOp` AST node.
+    pub fn conditional_op(condition: Node, if_true: Node, if_false: Node) -> Self {
+        Self::ConditionalOp(Box::new(condition), Box::new(if_true), Box::new(if_false))
+    }
+
+    /// Creates a `Const` AST node.
+    pub fn const_node<C>(node: C) -> Self
+    where
+        C: Into<Const>,
+    {
+        Self::Const(node.into())
+    }
+
+    /// Creates a `ConstDecl` AST node.
+    pub fn const_decl<D>(decl: D) -> Self
+    where
+        D: Into<Vec<(String, Node)>>,
+    {
+        Self::ConstDecl(decl.into())
+    }
+
+    /// Creates a `Continue` AST node.
+    pub fn continue_node<OL, L>(label: OL) -> Self
+    where
+        L: Into<String>,
+        OL: Into<Option<L>>,
+    {
+        Self::Continue(label.into().map(L::into))
+    }
+
+    /// Creates a `DoWhileLoop` AST node.
+    pub fn do_while_loop(body: Node, condition: Node) -> Self {
+        Self::DoWhileLoop(Box::new(body), Box::new(condition))
+    }
+
+    // TODO:
+    // /// Create a function with the given name, arguments, and internal AST node.
+    // FunctionDecl(Option<String>, Vec<FormalParameter>, Box<Node>),
+    // /// Gets the constant field of a value.
+    // GetConstField(Box<Node>, String),
+    // /// Gets the [field] of a value.
+    // GetField(Box<Node>, Box<Node>),
+    // /// [init], [cond], [step], body
+    // ForLoop(
+    //     Option<Box<Node>>,
+    //     Option<Box<Node>>,
+    //     Option<Box<Node>>,
+    //     Box<Node>,
+    // ),
+    // /// Check if a conditional expression is true and run an expression if it is and another expression if it isn't
+    // If(Box<Node>, Box<Node>, Option<Box<Node>>),
+    // /// Let declaraton
+    // LetDecl(Vec<(String, Option<Node>)>),
+
+    /// Creates a `Local` AST node.
+    pub fn local<N>(name: N) -> Self
+    where
+        N: Into<String>,
+    {
+        Self::Local(name.into())
+    }
+
+    // /// New
+    // New(Box<Node>),
+    // /// Object Declaration
+    // Object(Vec<PropertyDefinition>),
+    // /// Return the expression from a function
+    // Return(Option<Box<Node>>),
+    // /// Run blocks whose cases match the expression
+    // Switch(Box<Node>, Vec<(Node, Vec<Node>)>, Option<Box<Node>>),
+    // /// `...a` - spread an iterable value
+    // Spread(Box<Node>),
+    // // Similar to Block but without the braces
+    // StatementList(Vec<Node>),
+    // /// Throw a value
+    // Throw(Box<Node>),
+    // /// Return a string representing the type of the given expression
+    // TypeOf(Box<Node>),
+    // /// Try / Catch
+    // Try(
+    //     Box<Node>,
+    //     Option<Box<Node>>,
+    //     Option<Box<Node>>,
+    //     Option<Box<Node>>,
+    // ),
+    // /// The JavaScript `this` keyword refers to the object it belongs to.
+    // ///
+    // /// A property of an execution context (global, function or eval) that,
+    // /// in non–strict mode, is always a reference to an object and in strict
+    // /// mode can be any value.
+    // ///
+    // /// For more information, please check: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this>
+    // This,
+    // /// Run an operation on a value
+    // UnaryOp(UnaryOp, Box<Node>),
+    // /// A variable declaration
+    // VarDecl(Vec<(String, Option<Node>)>),
+    // /// Repeatedly run an expression while the conditional expression resolves to true
+    // WhileLoop(Box<Node>, Box<Node>),
+
     /// Implements the display formatting with indentation.
     fn display(&self, f: &mut fmt::Formatter<'_>, indentation: usize) -> fmt::Result {
         let indent = "    ".repeat(indentation);

@@ -238,6 +238,36 @@ pub enum BinOp {
     Assign(AssignOp),
 }
 
+impl From<NumOp> for BinOp {
+    fn from(op: NumOp) -> Self {
+        Self::Num(op)
+    }
+}
+
+impl From<BitOp> for BinOp {
+    fn from(op: BitOp) -> Self {
+        Self::Bit(op)
+    }
+}
+
+impl From<CompOp> for BinOp {
+    fn from(op: CompOp) -> Self {
+        Self::Comp(op)
+    }
+}
+
+impl From<LogOp> for BinOp {
+    fn from(op: LogOp) -> Self {
+        Self::Log(op)
+    }
+}
+
+impl From<AssignOp> for BinOp {
+    fn from(op: AssignOp) -> Self {
+        Self::Assign(op)
+    }
+}
+
 impl Operator for BinOp {
     fn get_assoc(&self) -> bool {
         true

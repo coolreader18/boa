@@ -12,9 +12,7 @@ use super::{
     error::{ParseError, ParseResult},
     read_formal_parameters, AssignmentExpression, Expression, TokenParser,
 };
-use crate::syntax::ast::{
-    constant::Const, keyword::Keyword, node::Node, punc::Punctuator, token::TokenKind,
-};
+use crate::syntax::ast::{keyword::Keyword, node::Node, punc::Punctuator, token::TokenKind};
 
 type ExpressionStatement = Expression;
 type BlockStatement = Block;
@@ -548,7 +546,7 @@ impl TokenParser for BreakStatement {
                 cursor.back();
                 Ok(Node::Break(None))
             }
-            TokenKind::Identifier(name) => Ok(Node::Break(Some(name.clone()))),
+            TokenKind::Identifier(name) => Ok(Node::break_node(name)),
             _ => Err(ParseError::Expected(
                 vec![
                     TokenKind::Punctuator(Punctuator::Semicolon),
@@ -589,7 +587,7 @@ impl TokenParser for ForStatement {
             .next_if(TokenKind::Punctuator(Punctuator::Semicolon))
             .is_some()
         {
-            Some(Box::new(Node::Const(Const::Bool(true))))
+            Some(Box::new(Node::const_node(true)))
         } else {
             let step = Some(Box::new(Expression::parse(cursor)?));
             cursor.expect_punc(Punctuator::Semicolon, "for statement")?;
@@ -634,7 +632,7 @@ impl TokenParser for ContinueStatement {
                 cursor.back();
                 Ok(Node::Continue(None))
             }
-            TokenKind::Identifier(name) => Ok(Node::Continue(Some(name.clone()))),
+            TokenKind::Identifier(name) => Ok(Node::continue_node(name)),
             _ => Err(ParseError::Expected(
                 vec![
                     TokenKind::Punctuator(Punctuator::Semicolon),
@@ -791,6 +789,6 @@ impl TokenParser for DoWhileStatement {
         cursor.expect_punc(Punctuator::CloseParen, "do while statement")?;
         cursor.expect_semicolon("do while statement")?;
 
-        Ok(Node::DoWhileLoop(Box::new(body), Box::new(cond)))
+        Ok(Node::do_while_loop(body, cond))
     }
 }

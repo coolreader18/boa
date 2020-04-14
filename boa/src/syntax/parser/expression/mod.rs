@@ -103,12 +103,12 @@ impl TokenParser for AssignmentExpression {
         if let Some(tok) = cursor.next() {
             match tok.kind {
                 TokenKind::Punctuator(Punctuator::Assign) => {
-                    lhs = Node::Assign(Box::new(lhs), Box::new(Self::parse(cursor)?))
+                    lhs = Node::assign(lhs, Self::parse(cursor)?)
                 }
                 TokenKind::Punctuator(p) if p.as_binop().is_some() => {
                     let expr = Self::parse(cursor)?;
                     let binop = p.as_binop().expect("binop disappeared");
-                    lhs = Node::BinOp(binop, Box::new(lhs), Box::new(expr));
+                    lhs = Node::bin_op(binop, lhs, expr);
                 }
                 _ => {
                     cursor.back();
@@ -142,11 +142,7 @@ impl TokenParser for ConditionalExpression {
                 cursor.expect_punc(Punctuator::Colon, "conditional expression")?;
 
                 let else_clause = AssignmentExpression::parse(cursor)?;
-                return Ok(Node::ConditionalOp(
-                    Box::new(lhs),
-                    Box::new(then_clause),
-                    Box::new(else_clause),
-                ));
+                return Ok(Node::conditional_op(lhs, then_clause, else_clause));
             } else {
                 cursor.back();
             }
@@ -508,7 +504,7 @@ impl TokenParser for MemberExpression {
             let lhs = Self::parse(cursor)?;
             cursor.expect_punc(Punctuator::OpenParen, "member expression")?;
             let args = read_arguments(cursor)?;
-            let call_node = Node::Call(Box::new(lhs), args);
+            let call_node = Node::call(lhs, args);
 
             Node::New(Box::new(call_node))
         } else {
@@ -564,7 +560,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
         .is_some()
     {
         let args = read_arguments(cursor)?;
-        lhs = Node::Call(Box::new(lhs), args);
+        lhs = Node::call(lhs, args);
     } else {
         let next_token = cursor
             .next_skip_lineterminator()
@@ -583,7 +579,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
                     .next_skip_lineterminator()
                     .ok_or(ParseError::AbruptEnd)?; // We move the cursor.
                 let args = read_arguments(cursor)?;
-                lhs = Node::Call(Box::new(lhs), args);
+                lhs = Node::call(lhs, args);
             }
             TokenKind::Punctuator(Punctuator::Dot) => {
                 let _ = cursor
@@ -693,20 +689,17 @@ impl TokenParser for PrimaryExpression {
             }
             TokenKind::Punctuator(Punctuator::OpenBracket) => ArrayLiteral::parse(cursor),
             TokenKind::Punctuator(Punctuator::OpenBlock) => ObjectLiteral::parse(cursor),
-            TokenKind::BooleanLiteral(boolean) => Ok(Node::Const(Const::Bool(*boolean))),
+            TokenKind::BooleanLiteral(boolean) => Ok(Node::const_node(*boolean)),
             // TODO: ADD TokenKind::UndefinedLiteral
             TokenKind::Identifier(ref i) if i == "undefined" => Ok(Node::Const(Const::Undefined)),
             TokenKind::NullLiteral => Ok(Node::Const(Const::Null)),
             TokenKind::Identifier(ident) => Ok(Node::Local(ident.clone())),
-            TokenKind::StringLiteral(s) => Ok(Node::Const(Const::String(s.clone()))),
-            TokenKind::NumericLiteral(num) => Ok(Node::Const(Const::Num(*num))),
+            TokenKind::StringLiteral(s) => Ok(Node::const_node(s)),
+            TokenKind::NumericLiteral(num) => Ok(Node::const_node(*num)),
             TokenKind::RegularExpressionLiteral(body, flags) => {
-                Ok(Node::New(Box::new(Node::Call(
-                    Box::new(Node::Local("RegExp".to_string())),
-                    vec![
-                        Node::Const(Const::String(body.clone())),
-                        Node::Const(Const::String(flags.clone())),
-                    ],
+                Ok(Node::New(Box::new(Node::call(
+                    Node::Local("RegExp".to_string()),
+                    vec![Node::const_node(body), Node::const_node(flags)],
                 ))))
             }
             _ => Err(ParseError::Unexpected(
