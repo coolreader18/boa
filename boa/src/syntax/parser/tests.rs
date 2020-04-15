@@ -14,7 +14,7 @@ fn check_parser(js: &str, expr: &[Node]) {
 
     assert_eq!(
         Parser::new(&lexer.tokens).parse_all().unwrap(),
-        Node::StatementList(expr.into())
+        Node::statement_list(expr)
     );
 }
 
@@ -37,8 +37,8 @@ fn check_string() {
 #[test]
 fn check_object_literal() {
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
-        PropertyDefinition::Property(String::from("b"), Node::const_node(false)),
+        PropertyDefinition::property("a", Node::const_node(true)),
+        PropertyDefinition::property("b", Node::const_node(false)),
     ];
 
     check_parser(
@@ -47,7 +47,7 @@ fn check_object_literal() {
             b: false,
         };
         ",
-        &[Node::ConstDecl(vec![(
+        &[Node::const_decl(vec![(
             String::from("x"),
             Node::Object(object_properties),
         )])],
@@ -58,11 +58,11 @@ fn check_object_literal() {
 fn check_object_short_function() {
     // Testing short function syntax
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
-        PropertyDefinition::MethodDefinition(
+        PropertyDefinition::property("a", Node::const_node(true)),
+        PropertyDefinition::method_definition(
             MethodDefinitionKind::Ordinary,
-            String::from("b"),
-            Node::FunctionDecl(None, Vec::new(), Box::new(Node::StatementList(Vec::new()))),
+            "b",
+            Node::function_decl::<_, String, _, _>(None, Vec::new(), Node::StatementList(vec![])),
         ),
     ];
 
@@ -87,10 +87,10 @@ fn check_object_short_function_arguments() {
         PropertyDefinition::MethodDefinition(
             MethodDefinitionKind::Ordinary,
             String::from("b"),
-            Node::FunctionDecl(
+            Node::function_decl::<_, String, _, _>(
                 None,
                 vec![FormalParameter::new("test", None, false)],
-                Box::new(Node::StatementList(Vec::new())),
+                Node::StatementList(Vec::new()),
             ),
         ),
     ];
@@ -113,7 +113,7 @@ fn check_array() {
     use crate::syntax::ast::constant::Const;
 
     // Check empty array
-    check_parser("[]", &[Node::ArrayDecl(vec![])]);
+    check_parser("[]", &[Node::ArrayDecl(Vec::new())]);
 
     // Check array with empty slot
     check_parser(
@@ -563,97 +563,97 @@ fn check_operations() {
 fn check_function_declarations() {
     check_parser(
         "function foo(a) { return a; }",
-        &[Node::FunctionDecl(
-            Some(String::from("foo")),
+        &[Node::function_decl(
+            "foo",
             vec![FormalParameter::new("a", None, false)],
-            Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
-                Node::local("a"),
-            )))])),
+            Node::StatementList(vec![Node::return_node(Node::local("a"))]),
         )],
     );
 
     check_parser(
         "function foo(a) { return; }",
-        &[Node::FunctionDecl(
-            Some(String::from("foo")),
+        &[Node::function_decl(
+            "foo",
             vec![FormalParameter::new("a", None, false)],
-            Box::new(Node::StatementList(vec![Node::Return(None)])),
+            Node::StatementList(vec![Node::Return(None)]),
         )],
     );
 
     check_parser(
         "function foo(a) { return }",
-        &[Node::FunctionDecl(
-            Some(String::from("foo")),
+        &[Node::function_decl(
+            "foo",
             vec![FormalParameter::new("a", None, false)],
-            Box::new(Node::StatementList(vec![Node::Return(None)])),
+            Node::StatementList(vec![Node::Return(None)]),
         )],
     );
 
     check_parser(
         "function foo(a, ...b) {}",
-        &[Node::FunctionDecl(
-            Some(String::from("foo")),
+        &[Node::function_decl(
+            "foo",
             vec![
                 FormalParameter::new("a", None, false),
                 FormalParameter::new("b", None, true),
             ],
-            Box::new(Node::StatementList(Vec::new())),
+            Node::StatementList(Vec::new()),
         )],
     );
 
     check_parser(
         "(...a) => {}",
-        &[Node::ArrowFunctionDecl(
+        &[Node::arrow_function_decl(
             vec![FormalParameter::new("a", None, true)],
-            Box::new(Node::StatementList(Vec::new())),
+            Node::StatementList(Vec::new()),
         )],
     );
 
     check_parser(
         "(a, b, ...c) => {}",
-        &[Node::ArrowFunctionDecl(
+        &[Node::arrow_function_decl(
             vec![
                 FormalParameter::new("a", None, false),
                 FormalParameter::new("b", None, false),
                 FormalParameter::new("c", None, true),
             ],
-            Box::new(Node::StatementList(Vec::new())),
+            Node::StatementList(Vec::new()),
         )],
     );
 
     check_parser(
         "(a, b) => { return a + b; }",
-        &[Node::ArrowFunctionDecl(
+        &[Node::arrow_function_decl(
             vec![
                 FormalParameter::new("a", None, false),
                 FormalParameter::new("b", None, false),
             ],
-            Box::new(Node::StatementList(vec![Node::Return(Some(Box::new(
-                Node::bin_op(NumOp::Add, Node::local("a"), Node::local("b")),
-            )))])),
+            Node::StatementList(vec![Node::return_node(Node::bin_op(
+                NumOp::Add,
+                Node::local("a"),
+                Node::local("b"),
+            ))]),
         )],
     );
 
     check_parser(
         "(a, b) => { return; }",
-        &[Node::ArrowFunctionDecl(
+        &[Node::arrow_function_decl(
             vec![
                 FormalParameter::new("a", None, false),
                 FormalParameter::new("b", None, false),
             ],
-            Box::new(Node::StatementList(vec![Node::Return(None)])),
+            Node::StatementList(vec![Node::Return(None)]),
         )],
     );
 
     check_parser(
         "(a, b) => { return }",
-        &[Node::ArrowFunctionDecl(
+        &[Node::arrow_function_decl(
             vec![
                 FormalParameter::new("a", None, false),
                 FormalParameter::new("b", None, false),
             ],
-            Box::new(Node::StatementList(vec![Node::Return(None)])),
+            Node::StatementList(vec![Node::Return(None)]),
         )],
     );
 }
@@ -664,13 +664,13 @@ fn check_do_while() {
         r#"do {
             a += 1;
         } while (true)"#,
-        &[Node::DoWhileLoop(
-            Box::new(Node::Block(vec![Node::bin_op(
+        &[Node::do_while_loop(
+            Node::Block(vec![Node::bin_op(
                 BinOp::Assign(AssignOp::Add),
                 Node::local("a"),
                 Node::const_node(1.0),
-            )])),
-            Box::new(Node::const_node(true)),
+            )]),
+            Node::const_node(true),
         )],
     );
 }
@@ -679,26 +679,20 @@ fn check_do_while() {
 fn check_break_parsing() {
     check_parser(
         "while (true) break;",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Break(None)),
-        )],
+        &[Node::while_loop(Node::const_node(true), Node::Break(None))],
     );
 
     check_parser(
         "while (true)
             break;",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Break(None)),
-        )],
+        &[Node::while_loop(Node::const_node(true), Node::Break(None))],
     );
 
     check_parser(
         "while (true) {break}",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::Break(None)])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::Break(None)]),
         )],
     );
 
@@ -706,17 +700,17 @@ fn check_break_parsing() {
         "while (true) {
             break test
         }",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::Break(Some("test".to_owned()))])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::break_node("test")]),
         )],
     );
 
     check_parser(
         "while (true) {break;}",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::Break(None)])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::Break(None)]),
         )],
     );
 
@@ -724,9 +718,9 @@ fn check_break_parsing() {
         "while (true) {
             break test;
         }",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::break_node("test")])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::break_node("test")]),
         )],
     );
 }
@@ -736,15 +730,12 @@ fn check_break_parsing() {
 fn check_construct_call_precedence() {
     check_parser(
         "new Date().getTime()",
-        &[Node::Call(
-            Box::new(Node::GetConstField(
-                Box::new(Node::New(Box::new(Node::Call(
-                    Box::new(Node::local("Date")),
-                    vec![],
-                )))),
-                String::from("getTime"),
-            )),
-            vec![],
+        &[Node::call(
+            Node::get_const_field(
+                Node::new(Node::call(Node::local("Date"), Vec::new())),
+                "getTime",
+            ),
+            Vec::new(),
         )],
     );
 }
@@ -753,26 +744,26 @@ fn check_construct_call_precedence() {
 fn check_continue_parsing() {
     check_parser(
         "while (true) continue;",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Continue(None)),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Continue(None),
         )],
     );
 
     check_parser(
         "while (true)
             continue;",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Continue(None)),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Continue(None),
         )],
     );
 
     check_parser(
         "while (true) {continue}",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::Continue(None)])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::Continue(None)]),
         )],
     );
 
@@ -780,17 +771,17 @@ fn check_continue_parsing() {
         "while (true) {
             continue test
         }",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::continue_node("test")])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::continue_node("test")]),
         )],
     );
 
     check_parser(
         "while (true) {continue;}",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::Continue(None)])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::Continue(None)]),
         )],
     );
 
@@ -798,9 +789,9 @@ fn check_continue_parsing() {
         "while (true) {
             continue test;
         }",
-        &[Node::WhileLoop(
-            Box::new(Node::const_node(true)),
-            Box::new(Node::Block(vec![Node::continue_node("test")])),
+        &[Node::while_loop(
+            Node::const_node(true),
+            Node::Block(vec![Node::continue_node("test")]),
         )],
     );
 }
@@ -818,8 +809,5 @@ fn assing_operator_precedence() {
 
 #[test]
 fn check_throw_parsing() {
-    check_parser(
-        "throw 'error';",
-        &[Node::Throw(Box::new(Node::const_node("error")))],
-    );
+    check_parser("throw 'error';", &[Node::throw(Node::const_node("error"))]);
 }

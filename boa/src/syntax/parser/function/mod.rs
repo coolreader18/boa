@@ -32,7 +32,7 @@ impl TokenParser for ArrowFunction {
                 return Err(ParseError::Expected(
                     vec![
                         TokenKind::Punctuator(Punctuator::OpenParen),
-                        TokenKind::Identifier("identifier".to_owned()),
+                        TokenKind::identifier("identifier"),
                     ],
                     next_token.clone(),
                     "arrow function",
@@ -50,7 +50,7 @@ impl TokenParser for ArrowFunction {
                 cursor.expect_punc(Punctuator::CloseBlock, "arrow function")?;
                 body
             }
-            _ => Node::Return(Some(Box::new(AssignmentExpression::parse(cursor)?))),
+            _ => Node::return_node(AssignmentExpression::parse(cursor)?),
         };
 
         Ok(Node::arrow_function_decl(params, body))
@@ -130,7 +130,7 @@ fn read_function_rest_parameter(cursor: &mut Cursor<'_>) -> Result<FormalParamet
             name
         } else {
             return Err(ParseError::Expected(
-                vec![TokenKind::Identifier("identifier".to_owned())],
+                vec![TokenKind::identifier("identifier")],
                 token.clone(),
                 "rest parameter",
             ));
@@ -156,7 +156,7 @@ fn read_formal_parameter(cursor: &mut Cursor<'_>) -> Result<FormalParameter, Par
         name
     } else {
         return Err(ParseError::Expected(
-            vec![TokenKind::Identifier("identifier".to_owned())],
+            vec![TokenKind::identifier("identifier")],
             token.clone(),
             "formal parameter",
         ));
@@ -175,7 +175,7 @@ impl TokenParser for FunctionExpression {
         let name = if let TokenKind::Identifier(name) =
             &cursor.peek(0).ok_or(ParseError::AbruptEnd)?.kind
         {
-            Some(name.clone())
+            Some(name)
         } else {
             None
         };
@@ -194,6 +194,6 @@ impl TokenParser for FunctionExpression {
 
         cursor.expect_punc(Punctuator::CloseBlock, "function expression")?;
 
-        Ok(Node::FunctionDecl(name, params, Box::new(body)))
+        Ok(Node::function_decl::<_, &String, _, _>(name, params, body))
     }
 }

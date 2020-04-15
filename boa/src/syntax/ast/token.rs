@@ -68,6 +68,63 @@ pub enum TokenKind {
     LineTerminator,
 }
 
+impl TokenKind {
+    /// Creates a `BooleanLiteral` token kind.
+    pub fn boolean_literal(lit: bool) -> Self {
+        Self::BooleanLiteral(lit)
+    }
+
+    /// Creates an `EOF` token kind.
+    pub fn eof() -> Self {
+        Self::EOF
+    }
+
+    /// Creates an `Identifier` token type.
+    pub fn identifier<I>(ident: I) -> Self
+    where
+        I: Into<String>,
+    {
+        Self::Identifier(ident.into())
+    }
+
+    /// Creates a `Keyword` token kind.
+    pub fn keyword(keyword: Keyword) -> Self {
+        Self::Keyword(keyword)
+    }
+
+    /// Creates a `NumericLiteral` token kind.
+    pub fn numeric_literal(lit: f64) -> Self {
+        Self::NumericLiteral(lit)
+    }
+
+    /// Creates a `Punctuator` token type.
+    pub fn punctuator(punc: Punctuator) -> Self {
+        Self::Punctuator(punc)
+    }
+
+    /// Creates a `StringLiteral` token type.
+    pub fn string_literal<S>(lit: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::StringLiteral(lit.into())
+    }
+
+    /// Creates a `RegularExpressionLiteral` token kind.
+    pub fn regular_expression_literal<B, F>(body: B, flags: F) -> Self
+    where
+        B: Into<String>,
+        F: Into<String>,
+    {
+        Self::RegularExpressionLiteral(body.into(), flags.into())
+    }
+
+    /// Creates a `LineTerminator` token kind.
+    pub fn line_terminator() -> Self {
+        Self::LineTerminator
+    }
+}
+
 impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match *self {

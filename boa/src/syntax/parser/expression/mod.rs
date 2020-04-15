@@ -35,10 +35,10 @@ macro_rules! expression { ($name:ident, $lower:ident, [$( $op:path ),*] ) => {
                 match tok.kind {
                     TokenKind::Punctuator(op) if $( op == $op )||* => {
                         let _ = cursor.next_skip_lineterminator().expect("token disappeared");
-                        lhs = Node::BinOp(
-                            op.as_binop().unwrap(),
-                            Box::new(lhs),
-                            Box::new($lower::parse(cursor)?)
+                        lhs = Node::bin_op(
+                            op.as_binop().expect("could not get binary operation"),
+                            lhs,
+                            $lower::parse(cursor)?
                         )
                     }
                     _ => break
@@ -365,10 +365,10 @@ impl TokenParser for ExponentiationExpression {
         let lhs = UpdateExpression::parse(cursor)?;
         if let Some(tok) = cursor.next() {
             if let TokenKind::Punctuator(Punctuator::Exp) = tok.kind {
-                return Ok(Node::BinOp(
+                return Ok(Node::bin_op(
                     BinOp::Num(NumOp::Exp),
-                    Box::new(lhs),
-                    Box::new(Self::parse(cursor)?),
+                    lhs,
+                    Self::parse(cursor)?,
                 ));
             } else {
                 cursor.back();
@@ -386,30 +386,26 @@ impl TokenParser for UnaryExpression {
     fn parse(cursor: &mut Cursor<'_>) -> ParseResult {
         let tok = cursor.next().ok_or(ParseError::AbruptEnd)?;
         match tok.kind {
-            TokenKind::Keyword(Keyword::Delete) => Ok(Node::UnaryOp(
-                UnaryOp::Delete,
-                Box::new(Self::parse(cursor)?),
-            )),
+            TokenKind::Keyword(Keyword::Delete) => {
+                Ok(Node::unary_op(UnaryOp::Delete, Self::parse(cursor)?))
+            }
             TokenKind::Keyword(Keyword::Void) => {
-                Ok(Node::UnaryOp(UnaryOp::Void, Box::new(Self::parse(cursor)?)))
+                Ok(Node::unary_op(UnaryOp::Void, Self::parse(cursor)?))
             }
-            TokenKind::Keyword(Keyword::TypeOf) => Ok(Node::UnaryOp(
-                UnaryOp::TypeOf,
-                Box::new(Self::parse(cursor)?),
-            )),
+            TokenKind::Keyword(Keyword::TypeOf) => {
+                Ok(Node::unary_op(UnaryOp::TypeOf, Self::parse(cursor)?))
+            }
             TokenKind::Punctuator(Punctuator::Add) => {
-                Ok(Node::UnaryOp(UnaryOp::Plus, Box::new(Self::parse(cursor)?)))
+                Ok(Node::unary_op(UnaryOp::Plus, Self::parse(cursor)?))
             }
-            TokenKind::Punctuator(Punctuator::Sub) => Ok(Node::UnaryOp(
-                UnaryOp::Minus,
-                Box::new(Self::parse(cursor)?),
-            )),
-            TokenKind::Punctuator(Punctuator::Neg) => Ok(Node::UnaryOp(
-                UnaryOp::Tilde,
-                Box::new(Self::parse(cursor)?),
-            )),
+            TokenKind::Punctuator(Punctuator::Sub) => {
+                Ok(Node::unary_op(UnaryOp::Minus, Self::parse(cursor)?))
+            }
+            TokenKind::Punctuator(Punctuator::Neg) => {
+                Ok(Node::unary_op(UnaryOp::Tilde, Self::parse(cursor)?))
+            }
             TokenKind::Punctuator(Punctuator::Not) => {
-                Ok(Node::UnaryOp(UnaryOp::Not, Box::new(Self::parse(cursor)?)))
+                Ok(Node::unary_op(UnaryOp::Not, Self::parse(cursor)?))
             }
             _ => {
                 cursor.back();
@@ -433,18 +429,18 @@ impl TokenParser for UpdateExpression {
                 cursor
                     .next_skip_lineterminator()
                     .expect("token disappeared");
-                return Ok(Node::UnaryOp(
+                return Ok(Node::unary_op(
                     UnaryOp::IncrementPre,
-                    Box::new(LeftHandSideExpression::parse(cursor)?),
+                    LeftHandSideExpression::parse(cursor)?,
                 ));
             }
             TokenKind::Punctuator(Punctuator::Dec) => {
                 cursor
                     .next_skip_lineterminator()
                     .expect("token disappeared");
-                return Ok(Node::UnaryOp(
+                return Ok(Node::unary_op(
                     UnaryOp::DecrementPre,
-                    Box::new(LeftHandSideExpression::parse(cursor)?),
+                    LeftHandSideExpression::parse(cursor)?,
                 ));
             }
             _ => {}
@@ -455,11 +451,11 @@ impl TokenParser for UpdateExpression {
             match tok.kind {
                 TokenKind::Punctuator(Punctuator::Inc) => {
                     cursor.next().expect("token disappeared");
-                    return Ok(Node::UnaryOp(UnaryOp::IncrementPost, Box::new(lhs)));
+                    return Ok(Node::unary_op(UnaryOp::IncrementPost, lhs));
                 }
                 TokenKind::Punctuator(Punctuator::Dec) => {
                     cursor.next().expect("token disappeared");
-                    return Ok(Node::UnaryOp(UnaryOp::DecrementPost, Box::new(lhs)));
+                    return Ok(Node::unary_op(UnaryOp::DecrementPost, lhs));
                 }
                 _ => {}
             }
@@ -506,7 +502,7 @@ impl TokenParser for MemberExpression {
             let args = read_arguments(cursor)?;
             let call_node = Node::call(lhs, args);
 
-            Node::New(Box::new(call_node))
+            Node::new(call_node)
         } else {
             PrimaryExpression::parse(cursor)?
         };
@@ -521,15 +517,11 @@ impl TokenParser for MemberExpression {
                         .ok_or(ParseError::AbruptEnd)?
                         .kind
                     {
-                        TokenKind::Identifier(name) => {
-                            lhs = Node::GetConstField(Box::new(lhs), name.clone())
-                        }
-                        TokenKind::Keyword(kw) => {
-                            lhs = Node::GetConstField(Box::new(lhs), kw.to_string())
-                        }
+                        TokenKind::Identifier(name) => lhs = Node::get_const_field(lhs, name),
+                        TokenKind::Keyword(kw) => lhs = Node::get_const_field(lhs, kw.to_string()),
                         _ => {
                             return Err(ParseError::Expected(
-                                vec![TokenKind::Identifier("identifier".to_owned())],
+                                vec![TokenKind::identifier("identifier")],
                                 tok.clone(),
                                 "member expression",
                             ));
@@ -542,7 +534,7 @@ impl TokenParser for MemberExpression {
                         .ok_or(ParseError::AbruptEnd)?; // We move the cursor forward.
                     let idx = Expression::parse(cursor)?;
                     cursor.expect_punc(Punctuator::CloseBracket, "member expression")?;
-                    lhs = Node::GetField(Box::new(lhs), Box::new(idx));
+                    lhs = Node::get_field(lhs, idx);
                 }
                 _ => break,
             }
@@ -591,14 +583,14 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
                     .kind
                 {
                     TokenKind::Identifier(name) => {
-                        lhs = Node::GetConstField(Box::new(lhs), name.clone());
+                        lhs = Node::get_const_field(lhs, name);
                     }
                     TokenKind::Keyword(kw) => {
-                        lhs = Node::GetConstField(Box::new(lhs), kw.to_string());
+                        lhs = Node::get_const_field(lhs, kw.to_string());
                     }
                     _ => {
                         return Err(ParseError::Expected(
-                            vec![TokenKind::Identifier("identifier".to_owned())],
+                            vec![TokenKind::identifier("identifier")],
                             tok.clone(),
                             "call expression",
                         ));
@@ -611,7 +603,7 @@ fn read_call_expression(cursor: &mut Cursor<'_>, first_member_expr: Node) -> Par
                     .ok_or(ParseError::AbruptEnd)?; // We move the cursor.
                 let idx = Expression::parse(cursor)?;
                 cursor.expect_punc(Punctuator::CloseBracket, "call expression")?;
-                lhs = Node::GetField(Box::new(lhs), Box::new(idx));
+                lhs = Node::get_field(lhs, idx);
             }
             _ => break,
         }
@@ -660,7 +652,7 @@ fn read_arguments(cursor: &mut Cursor<'_>) -> Result<Vec<Node>, ParseError> {
             .next_if(TokenKind::Punctuator(Punctuator::Spread))
             .is_some()
         {
-            args.push(Node::Spread(Box::new(AssignmentExpression::parse(cursor)?)));
+            args.push(Node::spread(AssignmentExpression::parse(cursor)?));
         } else {
             args.push(AssignmentExpression::parse(cursor)?);
         }
@@ -693,15 +685,13 @@ impl TokenParser for PrimaryExpression {
             // TODO: ADD TokenKind::UndefinedLiteral
             TokenKind::Identifier(ref i) if i == "undefined" => Ok(Node::Const(Const::Undefined)),
             TokenKind::NullLiteral => Ok(Node::Const(Const::Null)),
-            TokenKind::Identifier(ident) => Ok(Node::Local(ident.clone())),
+            TokenKind::Identifier(ident) => Ok(Node::local(ident)),
             TokenKind::StringLiteral(s) => Ok(Node::const_node(s)),
             TokenKind::NumericLiteral(num) => Ok(Node::const_node(*num)),
-            TokenKind::RegularExpressionLiteral(body, flags) => {
-                Ok(Node::New(Box::new(Node::call(
-                    Node::Local("RegExp".to_string()),
-                    vec![Node::const_node(body), Node::const_node(flags)],
-                ))))
-            }
+            TokenKind::RegularExpressionLiteral(body, flags) => Ok(Node::new(Node::call(
+                Node::local("RegExp"),
+                vec![Node::const_node(body), Node::const_node(flags)],
+            ))),
             _ => Err(ParseError::Unexpected(
                 tok.clone(),
                 Some("primary expression"),
@@ -741,7 +731,7 @@ impl TokenParser for ArrayLiteral {
                 .is_some()
             {
                 let node = AssignmentExpression::parse(cursor)?;
-                elements.push(Node::Spread(Box::new(node)));
+                elements.push(Node::spread(node));
             } else {
                 elements.push(AssignmentExpression::parse(cursor)?);
             }

@@ -138,24 +138,31 @@ impl Node {
     }
 
     /// Creates an `ArraowFunctionDecl` AST node.
-    pub fn arrow_function_decl<P>(params: P, body: Node) -> Self
+    pub fn arrow_function_decl<P, B>(params: P, body: B) -> Self
     where
         P: Into<Vec<FormalParameter>>,
+        B: Into<Box<Node>>,
     {
-        Self::ArrowFunctionDecl(params.into(), Box::new(body))
+        Self::ArrowFunctionDecl(params.into(), body.into())
     }
 
     /// Creates an `Assign` AST node.
-    pub fn assign(lhs: Node, rhs: Node) -> Self {
-        Self::Assign(Box::new(lhs), Box::new(rhs))
+    pub fn assign<L, R>(lhs: L, rhs: R) -> Self
+    where
+        L: Into<Box<Node>>,
+        R: Into<Box<Node>>,
+    {
+        Self::Assign(lhs.into(), rhs.into())
     }
 
     /// Creates a `BinOp` AST node.
-    pub fn bin_op<O>(op: O, lhs: Node, rhs: Node) -> Self
+    pub fn bin_op<O, L, R>(op: O, lhs: L, rhs: R) -> Self
     where
         O: Into<BinOp>,
+        L: Into<Box<Node>>,
+        R: Into<Box<Node>>,
     {
-        Self::BinOp(op.into(), Box::new(lhs), Box::new(rhs))
+        Self::BinOp(op.into(), lhs.into(), rhs.into())
     }
 
     /// Creates a `Block` AST node.
@@ -176,16 +183,22 @@ impl Node {
     }
 
     /// Creates a `Call` AST node.
-    pub fn call<P>(function: Node, params: P) -> Self
+    pub fn call<F, P>(function: F, params: P) -> Self
     where
+        F: Into<Box<Node>>,
         P: Into<Vec<Node>>,
     {
-        Self::Call(Box::new(function), params.into())
+        Self::Call(function.into(), params.into())
     }
 
     /// Creates a `ConditionalOp` AST node.
-    pub fn conditional_op(condition: Node, if_true: Node, if_false: Node) -> Self {
-        Self::ConditionalOp(Box::new(condition), Box::new(if_true), Box::new(if_false))
+    pub fn conditional_op<C, T, F>(condition: C, if_true: T, if_false: F) -> Self
+    where
+        C: Into<Box<Node>>,
+        T: Into<Box<Node>>,
+        F: Into<Box<Node>>,
+    {
+        Self::ConditionalOp(condition.into(), if_true.into(), if_false.into())
     }
 
     /// Creates a `Const` AST node.
@@ -214,28 +227,80 @@ impl Node {
     }
 
     /// Creates a `DoWhileLoop` AST node.
-    pub fn do_while_loop(body: Node, condition: Node) -> Self {
-        Self::DoWhileLoop(Box::new(body), Box::new(condition))
+    pub fn do_while_loop<B, C>(body: B, condition: C) -> Self
+    where
+        B: Into<Box<Node>>,
+        C: Into<Box<Node>>,
+    {
+        Self::DoWhileLoop(body.into(), condition.into())
     }
 
-    // TODO:
-    // /// Create a function with the given name, arguments, and internal AST node.
-    // FunctionDecl(Option<String>, Vec<FormalParameter>, Box<Node>),
-    // /// Gets the constant field of a value.
-    // GetConstField(Box<Node>, String),
-    // /// Gets the [field] of a value.
-    // GetField(Box<Node>, Box<Node>),
-    // /// [init], [cond], [step], body
-    // ForLoop(
-    //     Option<Box<Node>>,
-    //     Option<Box<Node>>,
-    //     Option<Box<Node>>,
-    //     Box<Node>,
-    // ),
-    // /// Check if a conditional expression is true and run an expression if it is and another expression if it isn't
-    // If(Box<Node>, Box<Node>, Option<Box<Node>>),
-    // /// Let declaraton
-    // LetDecl(Vec<(String, Option<Node>)>),
+    /// Creates a `FunctionDecl` AST node.
+    pub fn function_decl<ON, N, P, B>(name: ON, params: P, body: B) -> Self
+    where
+        N: Into<String>,
+        ON: Into<Option<N>>,
+        P: Into<Vec<FormalParameter>>,
+        B: Into<Box<Node>>,
+    {
+        Self::FunctionDecl(name.into().map(N::into), params.into(), body.into())
+    }
+
+    /// Creates a `GetConstField` AST node.
+    pub fn get_const_field<V, L>(value: V, label: L) -> Self
+    where
+        V: Into<Box<Node>>,
+        L: Into<String>,
+    {
+        Self::GetConstField(value.into(), label.into())
+    }
+
+    /// Creates a `GetField` AST node.
+    pub fn get_field<V, F>(value: V, field: F) -> Self
+    where
+        V: Into<Box<Node>>,
+        F: Into<Box<Node>>,
+    {
+        Self::GetField(value.into(), field.into())
+    }
+
+    /// Creates a `ForLoop` AST node.
+    pub fn for_loop<OI, OC, OS, I, C, S, B>(init: OI, condition: OC, step: OS, body: B) -> Self
+    where
+        OI: Into<Option<I>>,
+        OC: Into<Option<C>>,
+        OS: Into<Option<S>>,
+        I: Into<Box<Node>>,
+        C: Into<Box<Node>>,
+        S: Into<Box<Node>>,
+        B: Into<Box<Node>>,
+    {
+        Self::ForLoop(
+            init.into().map(I::into),
+            condition.into().map(C::into),
+            step.into().map(S::into),
+            body.into(),
+        )
+    }
+
+    /// Creates an `If` AST node.
+    pub fn if_node<C, B, E, OE>(condition: C, body: B, else_node: OE) -> Self
+    where
+        C: Into<Box<Node>>,
+        B: Into<Box<Node>>,
+        E: Into<Box<Node>>,
+        OE: Into<Option<E>>,
+    {
+        Self::If(condition.into(), body.into(), else_node.into().map(E::into))
+    }
+
+    /// Creates a `LetDecl` AST node.
+    pub fn let_decl<I>(init: I) -> Self
+    where
+        I: Into<Vec<(String, Option<Node>)>>,
+    {
+        Self::LetDecl(init.into())
+    }
 
     /// Creates a `Local` AST node.
     pub fn local<N>(name: N) -> Self
@@ -245,43 +310,125 @@ impl Node {
         Self::Local(name.into())
     }
 
-    // /// New
-    // New(Box<Node>),
-    // /// Object Declaration
-    // Object(Vec<PropertyDefinition>),
-    // /// Return the expression from a function
-    // Return(Option<Box<Node>>),
-    // /// Run blocks whose cases match the expression
-    // Switch(Box<Node>, Vec<(Node, Vec<Node>)>, Option<Box<Node>>),
-    // /// `...a` - spread an iterable value
-    // Spread(Box<Node>),
-    // // Similar to Block but without the braces
-    // StatementList(Vec<Node>),
-    // /// Throw a value
-    // Throw(Box<Node>),
-    // /// Return a string representing the type of the given expression
-    // TypeOf(Box<Node>),
-    // /// Try / Catch
-    // Try(
-    //     Box<Node>,
-    //     Option<Box<Node>>,
-    //     Option<Box<Node>>,
-    //     Option<Box<Node>>,
-    // ),
-    // /// The JavaScript `this` keyword refers to the object it belongs to.
-    // ///
-    // /// A property of an execution context (global, function or eval) that,
-    // /// in non–strict mode, is always a reference to an object and in strict
-    // /// mode can be any value.
-    // ///
-    // /// For more information, please check: <https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this>
-    // This,
-    // /// Run an operation on a value
-    // UnaryOp(UnaryOp, Box<Node>),
-    // /// A variable declaration
-    // VarDecl(Vec<(String, Option<Node>)>),
-    // /// Repeatedly run an expression while the conditional expression resolves to true
-    // WhileLoop(Box<Node>, Box<Node>),
+    /// Creates a `New` AST node.
+    pub fn new<N>(node: N) -> Self
+    where
+        N: Into<Box<Node>>,
+    {
+        Self::New(node.into())
+    }
+
+    /// Creates an `Object` AST node.
+    pub fn object<D>(def: D) -> Self
+    where
+        D: Into<Vec<PropertyDefinition>>,
+    {
+        Self::Object(def.into())
+    }
+
+    /// Creates a `Return` AST node.
+    pub fn return_node<E, OE>(expr: OE) -> Self
+    where
+        E: Into<Box<Node>>,
+        OE: Into<Option<E>>,
+    {
+        Self::Return(expr.into().map(E::into))
+    }
+
+    /// Creates a `Switch` AST node.
+    pub fn switch<V, C, OD, D>(val: V, cases: C, default: OD) -> Self
+    where
+        V: Into<Box<Node>>,
+        C: Into<Vec<(Node, Vec<Node>)>>,
+        OD: Into<Option<D>>,
+        D: Into<Box<Node>>,
+    {
+        Self::Switch(val.into(), cases.into(), default.into().map(D::into))
+    }
+
+    /// Creates a `Spread` AST node.
+    pub fn spread<V>(val: V) -> Self
+    where
+        V: Into<Box<Node>>,
+    {
+        Self::Spread(val.into())
+    }
+
+    /// Creates a `StatementList` AST node.
+    pub fn statement_list<L>(list: L) -> Self
+    where
+        L: Into<Vec<Node>>,
+    {
+        Self::StatementList(list.into())
+    }
+
+    /// Creates a `Throw` AST node.
+    pub fn throw<V>(val: V) -> Self
+    where
+        V: Into<Box<Node>>,
+    {
+        Self::Throw(val.into())
+    }
+
+    /// Creates a `TypeOf` AST node.
+    pub fn type_of<E>(expr: E) -> Self
+    where
+        E: Into<Box<Node>>,
+    {
+        Self::TypeOf(expr.into())
+    }
+
+    /// Creates a `Try` AST node.
+    pub fn try_node<T, OC, OP, OF, C, P, F>(try_node: T, catch: OC, param: OP, finally: OF) -> Self
+    where
+        T: Into<Box<Node>>,
+        OC: Into<Option<C>>,
+        OP: Into<Option<P>>,
+        OF: Into<Option<F>>,
+        C: Into<Box<Node>>,
+        P: Into<Box<Node>>,
+        F: Into<Box<Node>>,
+    {
+        let catch = catch.into().map(C::into);
+        let finally = finally.into().map(F::into);
+
+        debug_assert!(
+            catch.is_some() || finally.is_some(),
+            "try/catch must have a catch or a finally block"
+        );
+
+        Self::Try(try_node.into(), catch, param.into().map(P::into), finally)
+    }
+
+    /// Creates a `This` AST node.
+    pub fn this() -> Self {
+        Self::This
+    }
+
+    /// Creates a `UnaryOp` AST node.
+    pub fn unary_op<V>(op: UnaryOp, val: V) -> Self
+    where
+        V: Into<Box<Node>>,
+    {
+        Self::UnaryOp(op, val.into())
+    }
+
+    /// Creates a `VarDecl` AST node.
+    pub fn var_decl<I>(init: I) -> Self
+    where
+        I: Into<Vec<(String, Option<Node>)>>,
+    {
+        Self::VarDecl(init.into())
+    }
+
+    /// Creates a `WhileLoop` AST node.
+    pub fn while_loop<C, B>(condition: C, body: B) -> Self
+    where
+        C: Into<Box<Node>>,
+        B: Into<Box<Node>>,
+    {
+        Self::WhileLoop(condition.into(), body.into())
+    }
 
     /// Implements the display formatting with indentation.
     fn display(&self, f: &mut fmt::Formatter<'_>, indentation: usize) -> fmt::Result {
@@ -293,12 +440,30 @@ impl Node {
 
         match *self {
             Self::Const(ref c) => write!(f, "{}", c),
-            Self::ConditionalOp(_, _, _) => write!(f, "Conditional op"), // TODO
-            Self::ForLoop(_, _, _, _) => write!(f, "for loop"),          // TODO
-            Self::This => write!(f, "this"),                             // TODO
-            Self::Try(_, _, _, _) => write!(f, "try/catch/finally"),     // TODO
-            Self::Break(_) => write!(f, "break"), // TODO: add potential value
-            Self::Continue(_) => write!(f, "continue"), // TODO: add potential value
+            Self::ConditionalOp(ref cond, ref if_true, ref if_false) => {
+                write!(f, "{} ? {} : {}", cond, if_true, if_false)
+            }
+            Self::ForLoop(_, _, _, _) => write!(f, "for loop"), // TODO
+            Self::This => write!(f, "this"),
+            Self::Try(_, _, _, _) => write!(f, "try/catch/finally"), // TODO
+            Self::Break(ref l) => write!(
+                f,
+                "break{}",
+                if let Some(label) = l {
+                    format!(" {}", label)
+                } else {
+                    String::new()
+                }
+            ),
+            Self::Continue(ref l) => write!(
+                f,
+                "continue{}",
+                if let Some(label) = l {
+                    format!(" {}", label)
+                } else {
+                    String::new()
+                }
+            ),
             Self::Spread(ref node) => write!(f, "...{}", node),
             Self::Block(ref block) => {
                 writeln!(f, "{{")?;
@@ -525,6 +690,42 @@ pub enum PropertyDefinition {
     Property(String, Node),
     MethodDefinition(MethodDefinitionKind, String, Node),
     SpreadObject(Node),
+}
+
+impl PropertyDefinition {
+    /// Creates an `IdentifierReference` property definition.
+    pub fn identifier_reference<I>(ident: I) -> Self
+    where
+        I: Into<String>,
+    {
+        Self::IdentifierReference(ident.into())
+    }
+
+    /// Creates a `Property` definition.
+    pub fn property<N, V>(name: N, value: V) -> Self
+    where
+        N: Into<String>,
+        V: Into<Node>,
+    {
+        Self::Property(name.into(), value.into())
+    }
+
+    /// Creates a `MethodDefinition`.
+    pub fn method_definition<N, B>(kind: MethodDefinitionKind, name: N, body: B) -> Self
+    where
+        N: Into<String>,
+        B: Into<Node>,
+    {
+        Self::MethodDefinition(kind, name.into(), body.into())
+    }
+
+    /// Creates a `SpreadObject`.
+    pub fn spread_object<O>(obj: O) -> Self
+    where
+        O: Into<Node>,
+    {
+        Self::SpreadObject(obj.into())
+    }
 }
 
 #[cfg_attr(feature = "serde-ast", derive(Serialize, Deserialize))]

@@ -127,7 +127,7 @@ impl TokenParser for IfStatement {
 
         let else_stm = match cursor.next() {
             Some(else_tok) if else_tok.kind == TokenKind::Keyword(Keyword::Else) => {
-                Some(Box::new(Statement::parse(cursor)?))
+                Some(Statement::parse(cursor)?)
             }
             _ => {
                 cursor.back();
@@ -135,7 +135,7 @@ impl TokenParser for IfStatement {
             }
         };
 
-        Ok(Node::If(Box::new(cond), Box::new(then_stm), else_stm))
+        Ok(Node::if_node::<_, _, Node, _>(cond, then_stm, else_stm))
     }
 }
 
@@ -184,7 +184,7 @@ impl VariableDeclarationList {
             name.clone()
         } else {
             return Err(ParseError::Expected(
-                vec![TokenKind::Identifier("identifier".to_string())],
+                vec![TokenKind::identifier("identifier")],
                 tok.clone(),
                 "variable declaration",
             ));
@@ -361,7 +361,7 @@ impl Declaration {
                 name.clone()
             } else {
                 return Err(ParseError::Expected(
-                    vec![TokenKind::Identifier("identifier".to_owned())],
+                    vec![TokenKind::identifier("identifier")],
                     token.clone(),
                     if is_const {
                         "const declaration"
@@ -428,7 +428,7 @@ impl TokenParser for FunctionDeclaration {
             name.clone()
         } else {
             return Err(ParseError::Expected(
-                vec![TokenKind::Identifier("function name".to_owned())],
+                vec![TokenKind::identifier("function name")],
                 token.clone(),
                 "function declaration",
             ));
@@ -447,7 +447,7 @@ impl TokenParser for FunctionDeclaration {
 
         cursor.expect_punc(Punctuator::CloseBlock, "function declaration")?;
 
-        Ok(Node::FunctionDecl(Some(name), params, Box::new(body)))
+        Ok(Node::function_decl(name, params, body))
     }
 }
 
@@ -476,7 +476,7 @@ impl TokenParser for ReturnStatement {
 
         cursor.expect_semicolon("return statement")?;
 
-        Ok(Node::Return(Some(Box::new(expr))))
+        Ok(Node::return_node(expr))
     }
 }
 
@@ -495,7 +495,7 @@ impl TokenParser for WhileStatement {
 
         let body = Statement::parse(cursor)?;
 
-        Ok(Node::WhileLoop(Box::new(cond), Box::new(body)))
+        Ok(Node::while_loop(cond, body))
     }
 }
 
@@ -552,7 +552,7 @@ impl TokenParser for BreakStatement {
                     TokenKind::Punctuator(Punctuator::Semicolon),
                     TokenKind::Punctuator(Punctuator::CloseBlock),
                     TokenKind::LineTerminator,
-                    TokenKind::Identifier("identifier".to_owned()),
+                    TokenKind::identifier("identifier"),
                 ],
                 tok.clone(),
                 "break statement",
@@ -571,14 +571,12 @@ impl TokenParser for ForStatement {
         cursor.expect_punc(Punctuator::OpenParen, "for statement")?;
 
         let init = match cursor.peek(0).ok_or(ParseError::AbruptEnd)?.kind {
-            TokenKind::Keyword(Keyword::Var) => {
-                Some(Box::new(VariableDeclarationList::parse(cursor)?))
-            }
+            TokenKind::Keyword(Keyword::Var) => Some(VariableDeclarationList::parse(cursor)?),
             TokenKind::Keyword(Keyword::Let) | TokenKind::Keyword(Keyword::Const) => {
-                Some(Box::new(Declaration::parse(cursor)?))
+                Some(Declaration::parse(cursor)?)
             }
             TokenKind::Punctuator(Punctuator::Semicolon) => None,
-            _ => Some(Box::new(Expression::parse(cursor)?)),
+            _ => Some(Expression::parse(cursor)?),
         };
 
         cursor.expect_punc(Punctuator::Semicolon, "for statement")?;
@@ -587,9 +585,9 @@ impl TokenParser for ForStatement {
             .next_if(TokenKind::Punctuator(Punctuator::Semicolon))
             .is_some()
         {
-            Some(Box::new(Node::const_node(true)))
+            Node::const_node(true)
         } else {
-            let step = Some(Box::new(Expression::parse(cursor)?));
+            let step = Expression::parse(cursor)?;
             cursor.expect_punc(Punctuator::Semicolon, "for statement")?;
             step
         };
@@ -605,12 +603,12 @@ impl TokenParser for ForStatement {
                 TokenKind::Punctuator(Punctuator::CloseParen),
                 "for statement",
             )?;
-            Some(Box::new(step))
+            Some(step)
         };
 
-        let body = Box::new(Statement::parse(cursor)?);
+        let body = Statement::parse(cursor)?;
 
-        let for_node = Node::ForLoop(init, cond, step, body);
+        let for_node = Node::for_loop::<_, _, _, Node, Node, Node, _>(init, cond, step, body);
 
         Ok(Node::Block(vec![for_node]))
     }
@@ -672,7 +670,7 @@ impl TokenParser for ThrowStatement {
             }
         }
 
-        Ok(Node::Throw(Box::new(expr)))
+        Ok(Node::throw(expr))
     }
 }
 
@@ -713,10 +711,10 @@ impl TokenParser for TryStatement {
             // TODO: should accept BindingPattern
             let tok = cursor.next().ok_or(ParseError::AbruptEnd)?;
             let catch_param = if let TokenKind::Identifier(s) = &tok.kind {
-                Node::Local(s.clone())
+                Node::local(s)
             } else {
                 return Err(ParseError::Expected(
-                    vec![TokenKind::Identifier("identifier".to_owned())],
+                    vec![TokenKind::identifier("identifier")],
                     tok.clone(),
                     "catch in try statement",
                 ));
@@ -724,10 +722,7 @@ impl TokenParser for TryStatement {
             cursor.expect_punc(Punctuator::CloseParen, "catch in try statement")?;
 
             // Catch block
-            (
-                Some(Box::new(Block::parse(cursor)?)),
-                Some(Box::new(catch_param)),
-            )
+            (Some(Block::parse(cursor)?), Some(catch_param))
         } else {
             (None, None)
         };
@@ -737,12 +732,17 @@ impl TokenParser for TryStatement {
             .next_if_skip_lineterminator(TokenKind::Keyword(Keyword::Finally))
             .is_some()
         {
-            Some(Box::new(Block::parse(cursor)?))
+            Some(Block::parse(cursor)?)
         } else {
             None
         };
 
-        Ok(Node::Try(Box::new(try_clause), catch, param, finally_block))
+        Ok(Node::try_node::<_, _, _, _, Node, Node, Node>(
+            try_clause,
+            catch,
+            param,
+            finally_block,
+        ))
     }
 }
 
