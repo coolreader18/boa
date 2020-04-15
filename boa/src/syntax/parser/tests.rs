@@ -83,10 +83,10 @@ fn check_object_short_function() {
 fn check_object_short_function_arguments() {
     // Testing short function syntax
     let object_properties = vec![
-        PropertyDefinition::Property(String::from("a"), Node::const_node(true)),
-        PropertyDefinition::MethodDefinition(
+        PropertyDefinition::property("a", Node::const_node(true)),
+        PropertyDefinition::method_definition(
             MethodDefinitionKind::Ordinary,
-            String::from("b"),
+            "b",
             Node::function_decl::<_, String, _, _>(
                 None,
                 vec![FormalParameter::new("test", None, false)],
