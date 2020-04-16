@@ -3,7 +3,7 @@
 use super::*;
 use crate::syntax::{
     ast::node::{FormalParameter, MethodDefinitionKind, Node, PropertyDefinition},
-    ast::op::{AssignOp, BinOp, BitOp, NumOp},
+    ast::op::{AssignOp, BinOp, BitOp, CompOp, NumOp, UnaryOp},
     lexer::Lexer,
 };
 
@@ -672,6 +672,30 @@ fn check_do_while() {
             )]),
             Node::const_node(true),
         )],
+    );
+
+    // Check semicolon insertion after do-while
+    check_parser(
+        r#"var i = 0;
+        do {console.log("hello");} while(i++ < 10) console.log("end");"#,
+        &[
+            Node::VarDecl(vec![(String::from("i"), Some(Node::const_node(0.0)))]),
+            Node::do_while_loop(
+                Node::Block(vec![Node::call(
+                    Node::get_const_field(Node::local("console"), "log"),
+                    vec![Node::const_node("hello")],
+                )]),
+                Node::bin_op(
+                    BinOp::Comp(CompOp::LessThan),
+                    Node::unary_op(UnaryOp::IncrementPost, Node::local("i")),
+                    Node::const_node(10.0),
+                ),
+            ),
+            Node::call(
+                Node::get_const_field(Node::local("console"), "log"),
+                vec![Node::const_node("end")],
+            ),
+        ],
     );
 }
 

@@ -158,7 +158,7 @@ impl TokenParser for VariableStatement {
 
         let decl_list = VariableDeclarationList::parse(cursor)?;
 
-        cursor.expect_semicolon("variable statement")?;
+        cursor.expect_semicolon(false, "variable statement")?;
 
         Ok(decl_list)
     }
@@ -474,7 +474,7 @@ impl TokenParser for ReturnStatement {
 
         let expr = Expression::parse(cursor)?;
 
-        cursor.expect_semicolon("return statement")?;
+        cursor.expect_semicolon(false, "return statement")?;
 
         Ok(Node::return_node(expr))
     }
@@ -787,7 +787,7 @@ impl TokenParser for DoWhileStatement {
         let cond = Expression::parse(cursor)?;
 
         cursor.expect_punc(Punctuator::CloseParen, "do while statement")?;
-        cursor.expect_semicolon("do while statement")?;
+        cursor.expect_semicolon(true, "do while statement")?;
 
         Ok(Node::do_while_loop(body, cond))
     }

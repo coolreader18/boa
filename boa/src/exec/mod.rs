@@ -309,7 +309,7 @@ impl Executor for Interpreter {
                             !(num_v_a as i32)
                         })
                     }
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 })
             }
             Node::BinOp(BinOp::Bit(ref op), ref a, ref b) => {

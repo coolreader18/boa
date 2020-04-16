@@ -151,7 +151,11 @@ impl<'a> Cursor<'a> {
     /// It will automatically insert a semicolon if needed, as specified in the [spec][spec].
     ///
     /// [spec]: https://tc39.es/ecma262/#sec-automatic-semicolon-insertion
-    pub(super) fn expect_semicolon(&mut self, routine: &'static str) -> Result<(), ParseError> {
+    pub(super) fn expect_semicolon(
+        &mut self,
+        do_while: bool,
+        routine: &'static str,
+    ) -> Result<(), ParseError> {
         match self.peek(0) {
             Some(tk) => match tk.kind {
                 TokenKind::Punctuator(Punctuator::Semicolon) => {
@@ -159,13 +163,28 @@ impl<'a> Cursor<'a> {
                     Ok(())
                 }
                 TokenKind::LineTerminator | TokenKind::Punctuator(Punctuator::CloseBlock) => Ok(()),
-                // TODO: The previous token is ) and the inserted semicolon would then be parsed as
-                //  the terminating semicolon of a do-while statement (13.7.2).
-                _ => Err(ParseError::Expected(
-                    vec![TokenKind::Punctuator(Punctuator::Semicolon)],
-                    tk.clone(),
-                    routine,
-                )),
+                _ => {
+                    if do_while {
+                        debug_assert!(
+                            self.pos != 0,
+                            "cannot be finishing a do-while if we are at the beginning"
+                        );
+
+                        let tok = self
+                            .tokens
+                            .get(self.pos - 1)
+                            .expect("could not find previous token");
+                        if tok.kind == TokenKind::Punctuator(Punctuator::CloseParen) {
+                            return Ok(());
+                        }
+                    }
+
+                    Err(ParseError::Expected(
+                        vec![TokenKind::Punctuator(Punctuator::Semicolon)],
+                        tk.clone(),
+                        routine,
+                    ))
+                }
             },
             None => Ok(()),
         }

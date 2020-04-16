@@ -16,7 +16,7 @@ fn symbol_creation(c: &mut Criterion) {
 }
 
 fn create_realm(c: &mut Criterion) {
-    c.bench_function("Create Realm", move |b| b.iter(|| Realm::create()));
+    c.bench_function("Create Realm", move |b| b.iter(Realm::create));
 }
 
 criterion_group!(benches, create_realm, symbol_creation);
